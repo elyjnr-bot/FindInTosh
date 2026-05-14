@@ -1,0 +1,1553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FindInTosh Desktop</title>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+    #root { width: 100vw; height: 100vh; }
+
+    @keyframes ft-blink { 0%, 49% { opacity: 1 } 50%, 100% { opacity: 0 } }
+    @keyframes ft-pulse-green {
+      0%   { box-shadow: 0 0 0 0 rgba(52,199,89,0.7); }
+      70%  { box-shadow: 0 0 0 8px rgba(52,199,89,0); }
+      100% { box-shadow: 0 0 0 0 rgba(52,199,89,0); }
+    }
+    @keyframes ft-pulse-orange {
+      0%   { transform: scale(1);    opacity: 1; }
+      50%  { transform: scale(1.04); opacity: 0.95; }
+      100% { transform: scale(1);    opacity: 1; }
+    }
+    @keyframes ft-spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }
+    @keyframes ft-bounce-in {
+      0%   { transform: scale(0.5); opacity: 0; }
+      70%  { transform: scale(1.1); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    @keyframes ft-slide-up {
+      from { transform: translateY(8px); opacity: 0; }
+      to   { transform: translateY(0); opacity: 1; }
+    }
+    @keyframes ft-phone-connect {
+      0%   { transform: scale(0.95) translateY(4px); opacity: 0; }
+      60%  { transform: scale(1.02) translateY(-2px); }
+      100% { transform: scale(1) translateY(0); opacity: 1; }
+    }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 3px; }
+
+    input, button { font-family: inherit; }
+    button { cursor: pointer; }
+    button:active { transform: scale(0.97); }
+
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 36px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background: rgba(0,0,0,0.15);
+      border-radius: 20px;
+      transition: background 0.2s;
+    }
+    .toggle-slider:before {
+      content: '';
+      position: absolute;
+      width: 16px; height: 16px;
+      left: 2px; top: 2px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .toggle-switch input:checked + .toggle-slider { background: #FF7A45; }
+    .toggle-switch input:checked + .toggle-slider:before { transform: translateX(16px); }
+    .toggle-switch.win input:checked + .toggle-slider { background: #0067B8; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+// ─── DESIGN TOKENS ────────────────────────────────────────────────────────────
+const FT = {
+  accent: '#FF7A45',
+  accentGradient: 'linear-gradient(135deg, #FF8E5C 0%, #FF4A1F 100%)',
+  accentGradientReverse: 'linear-gradient(315deg, #FF8E5C 0%, #FF4A1F 100%)',
+  success: '#34C759',
+  successGradient: 'linear-gradient(180deg, #5DE36B 0%, #2BC44A 100%)',
+  danger: '#FF3B30',
+  warn: '#FFB400',
+  info: '#007AFF',
+  winBlue: '#0067B8',
+  bgDark: '#0a0a0c',
+  bgPhoneGradient: 'radial-gradient(120% 100% at 30% 50%, #2a2a35 0%, #0a0a0c 60%)',
+  bgMacGlass: 'rgba(255,255,255,0.85)',
+  bgWin: '#F3F3F3',
+  textDim: 'rgba(255,255,255,0.55)',
+  textDim2: 'rgba(255,255,255,0.35)',
+  macWall: `
+    radial-gradient(circle at 20% 30%, rgba(255,180,200,0.55) 0%, transparent 45%),
+    radial-gradient(circle at 80% 20%, rgba(255,210,160,0.65) 0%, transparent 50%),
+    radial-gradient(circle at 70% 80%, rgba(180,200,255,0.45) 0%, transparent 55%),
+    radial-gradient(circle at 30% 75%, rgba(255,170,140,0.4) 0%, transparent 50%),
+    linear-gradient(135deg, #c4d9f5 0%, #f0c2c9 50%, #ffd3a8 100%)
+  `,
+  winWall: `
+    radial-gradient(circle at 50% 55%, rgba(120,170,255,0.45) 0%, transparent 50%),
+    radial-gradient(circle at 20% 20%, rgba(80,130,220,0.35) 0%, transparent 55%),
+    linear-gradient(135deg, #0c1d36 0%, #1a3b73 55%, #4a7bc8 100%)
+  `,
+  fontApple: '-apple-system, "SF Pro Display", "SF Pro Text", system-ui, BlinkMacSystemFont, sans-serif',
+  fontWin: '"Segoe UI Variable", "Segoe UI", system-ui, sans-serif',
+  fontMonoApple: '"SF Mono", ui-monospace, Menlo, monospace',
+  fontMonoWin: '"Cascadia Mono", "Cascadia Code", "Consolas", monospace',
+  shadowSoft: '0 1px 3px rgba(0,0,0,0.06), 0 6px 16px rgba(0,0,0,0.05)',
+  shadowCard: '0 1px 1px rgba(0,0,0,0.25), 0 8px 18px rgba(0,0,0,0.35)',
+  shadowPopover: '0 12px 40px rgba(0,0,0,0.22), 0 0 0 0.5px rgba(0,0,0,0.1)',
+  shadowCTA: '0 8px 24px rgba(255,122,69,0.4)',
+  shadowGreenCTA: '0 8px 24px rgba(52,199,89,0.4)',
+  pairCode: ['7','3','F','K','9','2'],
+};
+
+// ─── WEBSOCKET HOOK ───────────────────────────────────────────────────────────
+function useDesktopWS({ onInit, onPhoneConnected, onPhoneDisconnected, onLaunching, onDockSaved, onDockConfig }) {
+  const wsRef = React.useRef(null);
+  const [wsState, setWsState] = React.useState('disconnected');
+
+  React.useEffect(() => {
+    const host  = window.location.hostname || 'localhost';
+    const port  = window.location.port || '7342';
+    const room  = new URLSearchParams(window.location.search).get('room') || '';
+    const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const query = room ? `?room=${room}` : '';
+
+    const connect = () => {
+      const ws = new WebSocket(`${proto}://${host}:${port}${query}`);
+      wsRef.current = ws;
+      ws.onopen = () => {
+        setWsState('connected');
+        ws.send(JSON.stringify({ type: 'register', role: 'desktop' }));
+      };
+      ws.onmessage = (e) => {
+        let msg; try { msg = JSON.parse(e.data); } catch { return; }
+        if (msg.type === 'init')               onInit?.(msg);
+        if (msg.type === 'phone_connected')    onPhoneConnected?.(msg);
+        if (msg.type === 'phone_disconnected') onPhoneDisconnected?.(msg);
+        if (msg.type === 'launching')          onLaunching?.(msg);
+        if (msg.type === 'dock_saved')         onDockSaved?.(msg);
+        if (msg.type === 'dock_config')        onDockConfig?.(msg); // no-op slot for future real-time updates
+      };
+      ws.onclose = () => {
+        setWsState('disconnected');
+        wsRef.current = null;
+        setTimeout(connect, 3000); // auto-reconnect
+      };
+      ws.onerror = () => setWsState('error');
+    };
+    connect();
+    return () => wsRef.current?.close();
+  }, []);
+
+  const send = React.useCallback((msg) => {
+    if (wsRef.current?.readyState === 1)
+      wsRef.current.send(JSON.stringify(msg));
+  }, []);
+
+  return { wsState, send };
+}
+
+// ─── APP ICON SYSTEM ──────────────────────────────────────────────────────────
+const AppIconWrapper = ({ children, size = 100, radius = 0.22, shadow = true, style = {} }) => (
+  <div style={{
+    width: size, height: size, borderRadius: size * radius,
+    overflow: 'hidden', position: 'relative', flexShrink: 0,
+    boxShadow: shadow ? `0 1px 1px rgba(0,0,0,0.25), 0 ${size*0.08}px ${size*0.18}px rgba(0,0,0,0.35)` : 'none',
+    ...style,
+  }}>
+    {children}
+    <div style={{
+      position: 'absolute', inset: 0, borderRadius: 'inherit', pointerEvents: 'none',
+      background: 'linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 30%, rgba(0,0,0,0.08) 100%)',
+    }} />
+  </div>
+);
+
+const IconLaunchpad = ({ size = 100 }) => (
+  <AppIconWrapper size={size}>
+    <div style={{ width:'100%',height:'100%', background:'linear-gradient(135deg, #4a4a4f 0%, #1c1c1e 100%)', display:'grid', gridTemplateColumns:'1fr 1fr', gridTemplateRows:'1fr 1fr', gap:size*0.06, padding:size*0.22, boxSizing:'border-box' }}>
+      <div style={{ background:'rgba(255,255,255,0.92)', borderRadius:size*0.04 }} />
+      <div style={{ background:'rgba(255,255,255,0.55)', borderRadius:size*0.04 }} />
+      <div style={{ background:'rgba(255,255,255,0.55)', borderRadius:size*0.04 }} />
+      <div style={{ background:'rgba(255,255,255,0.92)', borderRadius:size*0.04 }} />
+    </div>
+  </AppIconWrapper>
+);
+const IconFinder = ({ size = 100 }) => (
+  <AppIconWrapper size={size}>
+    <div style={{ width:'100%',height:'100%', background:'linear-gradient(180deg, #7DC4FF 0%, #1A8FFF 100%)', position:'relative' }}>
+      <svg viewBox="0 0 100 100" width="100%" height="100%" style={{ position:'absolute',inset:0 }}>
+        <ellipse cx="38" cy="42" rx="6" ry="11" fill="white" />
+        <ellipse cx="62" cy="42" rx="6" ry="11" fill="white" />
+        <ellipse cx="38" cy="44" rx="2.4" ry="4" fill="#222" />
+        <ellipse cx="62" cy="44" rx="2.4" ry="4" fill="#222" />
+        <path d="M 32 64 Q 50 78 68 64" stroke="white" strokeWidth="4" fill="none" strokeLinecap="round" />
+      </svg>
+    </div>
+  </AppIconWrapper>
+);
+const IconSiri = ({ size = 100 }) => (
+  <AppIconWrapper size={size}>
+    <div style={{ width:'100%',height:'100%', background:'linear-gradient(135deg, #FF8E5C 0%, #FF4A1F 100%)', position:'relative' }}>
+      <svg viewBox="0 0 100 100" width="100%" height="100%" style={{ position:'absolute',inset:0 }}>
+        <g transform="translate(50 50)">
+          {[0,45,90,135].map(a => (
+            <rect key={a} x="-3" y="-26" width="6" height="52" rx="3" fill="white" transform={`rotate(${a})`} />
+          ))}
+          <circle r="5" fill="white" />
+        </g>
+      </svg>
+    </div>
+  </AppIconWrapper>
+);
+const IconCompass = ({ size = 100 }) => (
+  <AppIconWrapper size={size}>
+    <div style={{ width:'100%',height:'100%', background:'radial-gradient(circle at 30% 30%, #fff 0%, #d8d8dc 100%)', position:'relative' }}>
+      <svg viewBox="0 0 100 100" width="100%" height="100%" style={{ position:'absolute',inset:0 }}>
+        <circle cx="50" cy="50" r="36" fill="none" stroke="rgba(0,0,0,0.08)" strokeWidth="1.2" />
+        {Array.from({length:12}).map((_,i) => {
+          const a=(i*30)*Math.PI/180, r1=36, r2=i%3===0?30:33;
+          return <line key={i} x1={50+Math.sin(a)*r1} y1={50-Math.cos(a)*r1} x2={50+Math.sin(a)*r2} y2={50-Math.cos(a)*r2} stroke="rgba(0,0,0,0.45)" strokeWidth={i%3===0?1.4:0.8} />;
+        })}
+        <path d="M 50 22 L 56 50 L 50 56 L 44 50 Z" fill="#E63946" />
+        <path d="M 50 78 L 56 50 L 50 44 L 44 50 Z" fill="#fafafa" stroke="rgba(0,0,0,0.12)" strokeWidth="0.5" />
+        <circle cx="50" cy="50" r="2.5" fill="#222" />
+        <text x="50" y="19" textAnchor="middle" fontSize="7" fontWeight="700" fill="#222" fontFamily="-apple-system">N</text>
+      </svg>
+    </div>
+  </AppIconWrapper>
+);
+const IconMusic = ({ size = 100 }) => (
+  <AppIconWrapper size={size}>
+    <div style={{ width:'100%',height:'100%', background:'linear-gradient(180deg, #FF6B7E 0%, #E62D4A 100%)', position:'relative' }}>
+      <svg viewBox="0 0 100 100" width="100%" height="100%" style={{ position:'absolute',inset:0 }}>
+        <path d="M 38 22 L 38 60 Q 38 70 30 70 Q 22 70 22 62 Q 22 54 30 54 Q 33 54 35 56 L 35 32 L 70 24 L 70 56 Q 70 66 62 66 Q 54 66 54 58 Q 54 50 62 50 Q 65 50 67 52 L 67 28 L 38 36 Z" fill="white" />
+      </svg>
+    </div>
+  </AppIconWrapper>
+);
+const IconMessages = ({ size = 100 }) => (
+  <AppIconWrapper size={size}>
+    <div style={{ width:'100%',height:'100%', background:'linear-gradient(180deg, #5BE36B 0%, #2BC44A 100%)', position:'relative' }}>
+      <svg viewBox="0 0 100 100" width="100%" height="100%" style={{ position:'absolute',inset:0 }}>
+        <path d="M 50 20 C 70 20 84 31 84 47 C 84 63 70 74 50 74 C 47 74 44 73.7 41 73.2 L 26 80 L 30 67 C 22 62 16 55 16 47 C 16 31 30 20 50 20 Z" fill="white" />
+      </svg>
+    </div>
+  </AppIconWrapper>
+);
+const IconDiscord = ({ size = 100 }) => (
+  <AppIconWrapper size={size}>
+    <div style={{ width:'100%',height:'100%', background:'#5865F2', position:'relative' }}>
+      <svg viewBox="0 0 100 100" width="100%" height="100%" style={{ position:'absolute',inset:0 }}>
+        <path fill="white" d="M 71 30 C 65 27 59 25 53 25 L 52 27 C 58 28 63 30 67 33 C 56 27 43 27 31 33 C 35 30 40 28 46 27 L 45 25 C 39 25 33 27 27 30 C 19 42 17 54 18 65 C 25 70 32 73 39 73 L 41 70 C 38 69 35 68 33 66 C 39 70 47 72 50 72 C 53 72 61 70 67 66 C 65 68 62 69 59 70 L 61 73 C 68 73 75 70 82 65 C 83 53 81 41 71 30 Z M 38 60 C 35 60 33 57 33 54 C 33 51 35 48 38 48 C 41 48 43 51 43 54 C 43 57 41 60 38 60 Z M 62 60 C 59 60 57 57 57 54 C 57 51 59 48 62 48 C 65 48 67 51 67 54 C 67 57 65 60 62 60 Z" />
+      </svg>
+    </div>
+  </AppIconWrapper>
+);
+const IconTelegram = ({ size = 100 }) => (
+  <AppIconWrapper size={size}>
+    <div style={{ width:'100%',height:'100%', background:'linear-gradient(180deg, #3FA3E8 0%, #1A7CC9 100%)', position:'relative' }}>
+      <svg viewBox="0 0 100 100" width="100%" height="100%" style={{ position:'absolute',inset:0 }}>
+        <path d="M 78 24 L 18 50 L 40 57 L 50 78 L 62 60 L 78 24 Z" fill="white" />
+        <path d="M 40 57 L 78 24 L 50 64 Z" fill="rgba(0,0,0,0.12)" />
+        <path d="M 40 57 L 50 78 L 50 64 Z" fill="rgba(0,0,0,0.06)" />
+      </svg>
+    </div>
+  </AppIconWrapper>
+);
+const IconFigma = ({ size = 100 }) => (
+  <AppIconWrapper size={size}>
+    <div style={{ width:'100%',height:'100%', background:'#1E1E1E', position:'relative' }}>
+      <svg viewBox="0 0 100 100" width="100%" height="100%" style={{ position:'absolute',inset:0 }}>
+        <path fill="#F24E1E" d="M 38 20 h 12 v 16 h -12 a 8 8 0 0 1 0 -16 z" />
+        <path fill="#FF7262" d="M 50 20 h 12 a 8 8 0 0 1 0 16 h -12 z" />
+        <path fill="#A259FF" d="M 38 36 h 12 v 16 h -12 a 8 8 0 0 1 0 -16 z" />
+        <circle cx="58" cy="50" r="8" fill="#1ABCFE" />
+        <path fill="#0ACF83" d="M 38 52 h 12 v 16 a 8 8 0 0 1 -16 0 a 8 8 0 0 1 4 -16 z" />
+      </svg>
+    </div>
+  </AppIconWrapper>
+);
+const IconVSCode = ({ size = 100 }) => (
+  <AppIconWrapper size={size}>
+    <div style={{ width:'100%',height:'100%', background:'linear-gradient(135deg, #29B6F6 0%, #0277BD 100%)', position:'relative' }}>
+      <svg viewBox="0 0 100 100" width="100%" height="100%" style={{ position:'absolute',inset:0 }}>
+        <path fill="white" d="M 72 22 L 38 50 L 22 38 L 18 42 L 32 52 L 18 62 L 22 66 L 38 54 L 72 82 L 82 76 V 28 L 72 22 Z M 72 36 V 68 L 50 52 L 72 36 Z" />
+      </svg>
+    </div>
+  </AppIconWrapper>
+);
+const IconChrome = ({ size = 100 }) => (
+  <AppIconWrapper size={size}>
+    <div style={{ width:'100%',height:'100%', background:'white', position:'relative' }}>
+      <svg viewBox="0 0 100 100" width="100%" height="100%" style={{ position:'absolute',inset:0 }}>
+        <circle cx="50" cy="50" r="32" fill="white" />
+        <path d="M 50 18 A 32 32 0 0 1 78 35 L 56 47 A 8 8 0 0 0 44 47 Z" fill="#EA4335" />
+        <path d="M 78 35 A 32 32 0 0 1 70 75 L 56 53 A 8 8 0 0 0 56 47 Z" fill="#FBBC04" />
+        <path d="M 70 75 A 32 32 0 0 1 30 75 L 44 53 A 8 8 0 0 0 56 53 Z" fill="#34A853" />
+        <path d="M 22 35 A 32 32 0 0 0 30 75 L 44 53 A 8 8 0 0 1 44 47 Z" fill="#FBBC04" />
+        <path d="M 22 35 A 32 32 0 0 1 50 18 L 44 47 A 8 8 0 0 0 44 53 Z" fill="#34A853" />
+        <circle cx="50" cy="50" r="10" fill="#4285F4" />
+        <circle cx="50" cy="50" r="7" fill="white" />
+      </svg>
+    </div>
+  </AppIconWrapper>
+);
+const IconSafari = ({ size = 100 }) => (
+  <AppIconWrapper size={size}>
+    <div style={{ width:'100%',height:'100%', background:'linear-gradient(180deg, #19AEFA 0%, #1574E5 100%)', position:'relative' }}>
+      <svg viewBox="0 0 100 100" width="100%" height="100%" style={{ position:'absolute',inset:0 }}>
+        <circle cx="50" cy="50" r="34" fill="white" />
+        <circle cx="50" cy="50" r="29" fill="#E5F1FB" />
+        <path d="M 50 24 L 54 48 L 50 50 Z" fill="#888" />
+        <path d="M 50 76 L 46 52 L 50 50 Z" fill="#888" />
+        <path d="M 50 24 L 46 48 L 50 50 Z" fill="#E5413B" />
+        <path d="M 50 76 L 54 52 L 50 50 Z" fill="#E5413B" />
+      </svg>
+    </div>
+  </AppIconWrapper>
+);
+const IconNotion = ({ size = 100 }) => (
+  <AppIconWrapper size={size}>
+    <div style={{ width:'100%',height:'100%', background:'white', position:'relative' }}>
+      <svg viewBox="0 0 100 100" width="100%" height="100%" style={{ position:'absolute',inset:0 }}>
+        <text x="50" y="72" textAnchor="middle" fontSize="68" fontWeight="800" fill="#191919" fontFamily="-apple-system, system-ui">N</text>
+      </svg>
+    </div>
+  </AppIconWrapper>
+);
+const IconSlack = ({ size = 100 }) => (
+  <AppIconWrapper size={size}>
+    <div style={{ width:'100%',height:'100%', background:'white', position:'relative' }}>
+      <svg viewBox="0 0 100 100" width="100%" height="100%" style={{ position:'absolute',inset:0 }}>
+        <rect x="34" y="20" width="11" height="32" rx="5.5" fill="#36C5F0" />
+        <rect x="55" y="48" width="11" height="32" rx="5.5" fill="#2EB67D" />
+        <rect x="48" y="34" width="32" height="11" rx="5.5" fill="#ECB22E" />
+        <rect x="20" y="55" width="32" height="11" rx="5.5" fill="#E01E5A" />
+      </svg>
+    </div>
+  </AppIconWrapper>
+);
+const IconSpotify = ({ size = 100 }) => (
+  <AppIconWrapper size={size}>
+    <div style={{ width:'100%',height:'100%', background:'#1DB954', position:'relative' }}>
+      <svg viewBox="0 0 100 100" width="100%" height="100%" style={{ position:'absolute',inset:0 }}>
+        <path d="M 28 42 Q 50 36 72 46" stroke="white" strokeWidth="6" fill="none" strokeLinecap="round" />
+        <path d="M 31 53 Q 50 48 68 56" stroke="white" strokeWidth="5" fill="none" strokeLinecap="round" />
+        <path d="M 34 62 Q 50 58 64 64" stroke="white" strokeWidth="4" fill="none" strokeLinecap="round" />
+      </svg>
+    </div>
+  </AppIconWrapper>
+);
+const IconTerminal = ({ size = 100 }) => (
+  <AppIconWrapper size={size}>
+    <div style={{ width:'100%',height:'100%', background:'linear-gradient(135deg, #4a4a4f 0%, #1c1c1e 100%)', position:'relative' }}>
+      <svg viewBox="0 0 100 100" width="100%" height="100%" style={{ position:'absolute',inset:0 }}>
+        <text x="22" y="62" fontSize="36" fontWeight="600" fill="white" fontFamily="SF Mono, monospace">&gt;_</text>
+      </svg>
+    </div>
+  </AppIconWrapper>
+);
+const IconCalendar = ({ size = 100 }) => (
+  <AppIconWrapper size={size}>
+    <div style={{ width:'100%',height:'100%', background:'white', position:'relative' }}>
+      <svg viewBox="0 0 100 100" width="100%" height="100%" style={{ position:'absolute',inset:0 }}>
+        <text x="50" y="34" textAnchor="middle" fontSize="11" fontWeight="700" fill="#FF3B30" fontFamily="-apple-system, system-ui">TUE</text>
+        <text x="50" y="78" textAnchor="middle" fontSize="48" fontWeight="300" fill="#222" fontFamily="-apple-system, system-ui">14</text>
+      </svg>
+    </div>
+  </AppIconWrapper>
+);
+const IconMail = ({ size = 100 }) => (
+  <AppIconWrapper size={size}>
+    <div style={{ width:'100%',height:'100%', background:'linear-gradient(180deg, #6FC0FF 0%, #1A8FFF 100%)', position:'relative' }}>
+      <svg viewBox="0 0 100 100" width="100%" height="100%" style={{ position:'absolute',inset:0 }}>
+        <rect x="20" y="34" width="60" height="38" rx="5" fill="white" />
+        <path d="M 20 38 L 50 58 L 80 38" stroke="#1A8FFF" strokeWidth="3" fill="none" strokeLinejoin="round" />
+      </svg>
+    </div>
+  </AppIconWrapper>
+);
+const IconNotes = ({ size = 100 }) => (
+  <AppIconWrapper size={size}>
+    <div style={{ width:'100%',height:'100%', background:'linear-gradient(180deg, #FFF2A8 0%, #FFD45D 100%)', position:'relative' }}>
+      <svg viewBox="0 0 100 100" width="100%" height="100%" style={{ position:'absolute',inset:0 }}>
+        <rect x="22" y="38" width="56" height="3" rx="1.5" fill="rgba(0,0,0,0.18)" />
+        <rect x="22" y="50" width="56" height="3" rx="1.5" fill="rgba(0,0,0,0.18)" />
+        <rect x="22" y="62" width="40" height="3" rx="1.5" fill="rgba(0,0,0,0.18)" />
+      </svg>
+    </div>
+  </AppIconWrapper>
+);
+const IconXcode = ({ size = 100 }) => (
+  <AppIconWrapper size={size}>
+    <div style={{ width:'100%',height:'100%', background:'linear-gradient(180deg, #1A8FFF 0%, #084A99 100%)', position:'relative' }}>
+      <svg viewBox="0 0 100 100" width="100%" height="100%" style={{ position:'absolute',inset:0 }}>
+        <text x="50" y="68" textAnchor="middle" fontSize="42" fontWeight="800" fill="white" fontFamily="-apple-system, system-ui" fontStyle="italic">X</text>
+      </svg>
+    </div>
+  </AppIconWrapper>
+);
+const IconPhotoshop = ({ size = 100 }) => (
+  <AppIconWrapper size={size}>
+    <div style={{ width:'100%',height:'100%', background:'#001E36', position:'relative' }}>
+      <svg viewBox="0 0 100 100" width="100%" height="100%" style={{ position:'absolute',inset:0 }}>
+        <text x="50" y="72" textAnchor="middle" fontSize="48" fontWeight="800" fill="#31A8FF" fontFamily="-apple-system, system-ui">Ps</text>
+      </svg>
+    </div>
+  </AppIconWrapper>
+);
+const IconExcel = ({ size = 100 }) => (
+  <AppIconWrapper size={size}>
+    <div style={{ width:'100%',height:'100%', background:'linear-gradient(135deg, #21A366 0%, #107C41 100%)', position:'relative' }}>
+      <svg viewBox="0 0 100 100" width="100%" height="100%" style={{ position:'absolute',inset:0 }}>
+        <text x="50" y="68" textAnchor="middle" fontSize="44" fontWeight="700" fill="white" fontFamily="Segoe UI, system-ui">X</text>
+      </svg>
+    </div>
+  </AppIconWrapper>
+);
+const IconTeams = ({ size = 100 }) => (
+  <AppIconWrapper size={size}>
+    <div style={{ width:'100%',height:'100%', background:'#4B53BC', position:'relative' }}>
+      <svg viewBox="0 0 100 100" width="100%" height="100%" style={{ position:'absolute',inset:0 }}>
+        <text x="50" y="68" textAnchor="middle" fontSize="44" fontWeight="700" fill="white" fontFamily="Segoe UI, system-ui">T</text>
+      </svg>
+    </div>
+  </AppIconWrapper>
+);
+const IconFindInTosh = ({ size = 100, radius = 0.22 }) => (
+  <AppIconWrapper size={size} radius={radius}>
+    <div style={{ width:'100%',height:'100%', background:'linear-gradient(135deg, #FF8E5C 0%, #FF4A1F 100%)', position:'relative' }}>
+      <svg viewBox="0 0 100 100" width="100%" height="100%" style={{ position:'absolute',inset:0 }}>
+        <circle cx="44" cy="44" r="20" fill="none" stroke="white" strokeWidth="6" />
+        <path d="M 58 58 L 72 72" stroke="white" strokeWidth="7" strokeLinecap="round" />
+        <circle cx="44" cy="44" r="6" fill="white" />
+      </svg>
+    </div>
+  </AppIconWrapper>
+);
+
+const APP_ICONS = {
+  launchpad: IconLaunchpad, finder: IconFinder, siri: IconSiri, compass: IconCompass,
+  music: IconMusic, messages: IconMessages, discord: IconDiscord, telegram: IconTelegram,
+  figma: IconFigma, vscode: IconVSCode, chrome: IconChrome, safari: IconSafari,
+  notion: IconNotion, slack: IconSlack, spotify: IconSpotify, terminal: IconTerminal,
+  calendar: IconCalendar, mail: IconMail, notes: IconNotes, xcode: IconXcode,
+  photoshop: IconPhotoshop, excel: IconExcel, teams: IconTeams, findintosh: IconFindInTosh,
+};
+
+const AppIcon = ({ id, size = 100 }) => {
+  const C = APP_ICONS[id];
+  return C ? <C size={size} /> : <AppIconWrapper size={size}><div style={{ width:'100%',height:'100%',background:'#555' }} /></AppIconWrapper>;
+};
+
+// ─── REAL ICON (fetched from server) ─────────────────────────────────────────
+const RealIcon = ({ name, size = 56 }) => {
+  const isServed = window.location.hostname !== '';
+  const [err, setErr] = React.useState(false);
+
+  if (isServed && !err) {
+    return (
+      <img
+        src={`/icon/${encodeURIComponent(name)}${new URLSearchParams(window.location.search).get('room') ? '?room=' + new URLSearchParams(window.location.search).get('room') : ''}`}
+        width={size} height={size}
+        style={{ borderRadius: size * 0.22, objectFit: 'contain', flexShrink: 0 }}
+        onError={() => setErr(true)}
+        alt={name}
+      />
+    );
+  }
+  // Fallback for offline / icon not found
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: size * 0.22,
+      background: 'linear-gradient(135deg, #3a3a3c, #1c1c1e)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: size * 0.32, fontWeight: 700, color: 'rgba(255,255,255,0.6)',
+      fontFamily: '-apple-system, system-ui', flexShrink: 0,
+    }}>{name[0]}</div>
+  );
+};
+
+// ─── SHARED UTILS ─────────────────────────────────────────────────────────────
+const Toggle = ({ checked, onChange, win = false }) => (
+  <label className={`toggle-switch${win ? ' win' : ''}`}>
+    <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} />
+    <span className="toggle-slider"></span>
+  </label>
+);
+
+function generateCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from({length:6}, () => chars[Math.floor(Math.random()*chars.length)]);
+}
+
+// ─── MINI PHONE PREVIEW ───────────────────────────────────────────────────────
+const MiniPhonePreview = ({ filled = [], hilightSlot = null, page = 1, width = 300, onSlotClick = null }) => {
+  const height = Math.round(width * 140 / 300);
+  const slotSize = Math.round(width * 42 / 300);
+  const slots = Array.from({length:8}, (_,i) => filled[i] || null);
+  return (
+    <div>
+      <div style={{ display:'flex', gap:4, alignItems:'center', fontFamily:FT.fontApple, fontSize:11, color:'rgba(0,0,0,0.7)', marginBottom:8 }}>
+        {[1,2].map(p => (
+          <div key={p} style={{
+            padding:'4px 10px', borderRadius:6,
+            background: p===page ? 'rgba(0,0,0,0.08)' : 'transparent',
+            color: p===page ? '#1a1a1a' : 'rgba(0,0,0,0.4)',
+            fontWeight: p===page ? 600 : 500, cursor:'pointer',
+          }}>Page {p}</div>
+        ))}
+        <div style={{ color:'rgba(0,0,0,0.3)', padding:'4px 8px', cursor:'pointer' }}>+ New page</div>
+      </div>
+      <div style={{ width, height, borderRadius:22, background:'#C97A4F', padding:6, boxSizing:'border-box', boxShadow:'0 6px 16px rgba(0,0,0,0.15)' }}>
+        <div style={{ width:'100%', height:'100%', borderRadius:16, background:FT.bgPhoneGradient, position:'relative', overflow:'hidden' }}>
+          <div style={{ position:'absolute', left:4, top:'50%', transform:'translateY(-50%)', width:8, height:38, borderRadius:4, background:'#000' }} />
+          <div style={{ position:'absolute', inset:0, display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gridTemplateRows:'repeat(2, 1fr)', gap:6, padding:'12px 30px 12px 16px' }}>
+            {slots.map((app, i) => {
+              const isHi = hilightSlot === i;
+              if (app) {
+                return (
+                  <div key={i} style={{ display:'flex', alignItems:'center', justifyContent:'center', cursor: onSlotClick ? 'pointer' : 'default' }}
+                    onClick={() => onSlotClick && onSlotClick(i)}>
+                    <RealIcon name={app} size={slotSize} />
+                  </div>
+                );
+              }
+              return (
+                <div key={i} style={{
+                  display:'flex', alignItems:'center', justifyContent:'center', borderRadius:8,
+                  border: isHi ? `2px dashed ${FT.accent}` : '1px dashed rgba(255,255,255,0.18)',
+                  background: isHi ? 'rgba(255,122,69,0.1)' : 'transparent',
+                  animation: isHi ? 'ft-pulse-orange 1.4s ease-in-out infinite' : 'none',
+                  cursor: onSlotClick ? 'pointer' : 'default',
+                }} onClick={() => onSlotClick && onSlotClick(i)} />
+              );
+            })}
+          </div>
+        </div>
+      </div>
+      <div style={{ fontFamily:FT.fontApple, fontSize:11, color:'rgba(0,0,0,0.5)', marginTop:8 }}>
+        {slots.filter(Boolean).length} / 8 apps used
+      </div>
+    </div>
+  );
+};
+
+// ─── PAIRING CODE CELLS ───────────────────────────────────────────────────────
+const PairingCode = ({ code, mono = 'apple', size = 44, fontSize = 22 }) => (
+  <div style={{ display:'flex', gap:6 }}>
+    {code.map((c,i) => (
+      <div key={i} style={{
+        width:size, height:size, borderRadius:8,
+        background:'rgba(255,255,255,0.7)',
+        border:'0.5px solid rgba(0,0,0,0.1)',
+        display:'flex', alignItems:'center', justifyContent:'center',
+        fontFamily: mono==='win' ? FT.fontMonoWin : FT.fontMonoApple,
+        fontSize, fontWeight:700, color:'#1a1a1a',
+        boxShadow:'inset 0 1px 0 rgba(255,255,255,0.8)',
+        transition:'all 0.15s',
+      }}>{c}</div>
+    ))}
+  </div>
+);
+
+// ─── CONNECTION TAB ────────────────────────────────────────────────────────────
+const ConnectionTab = ({ platform, paired, setPaired, pairingCode, onRefresh }) => {
+  const [seconds, setSeconds] = useState(222); // 3:42
+  const [spinning, setSpinning] = useState(false);
+  const [connecting, setConnecting] = useState(false);
+  const font = platform === 'mac' ? FT.fontApple : FT.fontWin;
+  const accent = platform === 'mac' ? FT.info : FT.winBlue;
+
+  useEffect(() => {
+    if (paired) return;
+    const id = setInterval(() => {
+      setSeconds(s => {
+        if (s <= 0) { clearInterval(id); return 0; }
+        return s - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [paired, pairingCode]);
+
+  const formatTime = s => `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+
+  const handleRefresh = () => {
+    setSpinning(true);
+    setSeconds(222);
+    setTimeout(() => setSpinning(false), 600);
+    onRefresh?.();
+  };
+
+  const handleSimulate = () => {
+    setConnecting(true);
+    setTimeout(() => { setConnecting(false); setPaired(true); }, 1800);
+  };
+
+  if (paired) {
+    return (
+      <div style={{ padding:28, fontFamily:font, animation:'ft-slide-up 0.3s ease' }}>
+        {/* Success header */}
+        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', marginBottom:24 }}>
+          <div style={{
+            width:64, height:64, borderRadius:32, background:FT.successGradient,
+            boxShadow:FT.shadowGreenCTA, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:12,
+            animation:'ft-bounce-in 0.4s ease',
+          }}>
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="#fff" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M 7 16 L 14 23 L 25 10"/>
+            </svg>
+          </div>
+          <div style={{ fontSize:22, fontWeight:700, color:'#1a1a1a' }}>Connected!</div>
+          <div style={{ fontSize:13, color:'rgba(0,0,0,0.5)', marginTop:4 }}>Your phone is paired and ready.</div>
+        </div>
+
+        {/* Machine card */}
+        <div style={{
+          padding:'14px 16px', borderRadius: platform==='mac' ? 12 : 6,
+          background:'rgba(52,199,89,0.06)',
+          border:`1px solid rgba(52,199,89,0.25)`,
+          display:'flex', alignItems:'center', gap:12, marginBottom:20,
+        }}>
+          <div style={{ width:44, height:44, borderRadius:10, background:'linear-gradient(135deg,#333,#111)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+            <svg width="22" height="26" viewBox="0 0 13 16" fill="#fff">
+              <path d="M10.6 7.8 C 10.6 5.9 12.2 5 12.2 5 C 11.4 3.8 10.1 3.7 9.6 3.7 C 8.5 3.6 7.4 4.4 6.9 4.4 C 6.3 4.4 5.4 3.7 4.4 3.7 C 3.1 3.7 1.9 4.5 1.2 5.8 C -0.1 8.3 0.9 12 2.2 14 C 2.8 15 3.6 16 4.6 16 C 5.5 15.9 5.9 15.4 7 15.4 C 8.1 15.4 8.4 16 9.4 16 C 10.5 16 11.2 15 11.8 14 C 12.5 12.9 12.8 11.9 12.8 11.8 C 12.8 11.8 10.6 11 10.6 7.8 Z M 8.7 2.6 C 9.2 2 9.6 1.1 9.4 0.2 C 8.7 0.2 7.7 0.7 7.2 1.3 C 6.7 1.8 6.3 2.7 6.4 3.5 C 7.2 3.6 8.1 3.1 8.7 2.6 Z" />
+            </svg>
+          </div>
+          <div style={{ flex:1, minWidth:0 }}>
+            <div style={{ fontSize:14, fontWeight:600, color:'#1a1a1a' }}>Lucas's iPhone 15 Pro</div>
+            <div style={{ fontSize:11, color:'rgba(0,0,0,0.5)', marginTop:2 }}>iOS 18.4 · 192.168.1.55 · paired just now</div>
+          </div>
+          <div style={{ display:'flex', alignItems:'center', gap:5 }}>
+            <span style={{ width:7, height:7, borderRadius:4, background:FT.success, display:'block', animation:'ft-pulse-green 1.6s ease-out infinite' }} />
+            <span style={{ fontSize:10, fontWeight:700, color:FT.success, letterSpacing:0.6 }}>LIVE</span>
+          </div>
+        </div>
+
+        <button style={{
+          width:'100%', height:40, borderRadius: platform==='mac' ? 10 : 4,
+          background: FT.accentGradient, border:'none', color:'#fff',
+          fontFamily:font, fontSize:14, fontWeight:600, cursor:'pointer',
+          boxShadow:FT.shadowCTA, marginBottom:12,
+        }}>Open dock configuration →</button>
+
+        <div style={{ textAlign:'center' }}>
+          <button onClick={() => setPaired(false)} style={{
+            background:'none', border:'none', color:FT.danger, fontFamily:font, fontSize:13,
+            cursor:'pointer', textDecoration:'underline', opacity:0.7,
+          }}>Unpair device</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ padding:28, fontFamily:font }}>
+      <div style={{ fontSize:9, fontWeight:700, letterSpacing:1.3, color:'rgba(0,0,0,0.4)', marginBottom:10 }}>PAIRING CODE</div>
+      <PairingCode code={pairingCode} mono={platform==='mac' ? 'apple' : 'win'} />
+
+      {/* Info banner */}
+      <div style={{
+        marginTop:14, padding:'10px 12px', borderRadius: platform==='mac' ? 10 : 4,
+        background: platform==='mac' ? 'rgba(0,122,255,0.08)' : '#FFF4CE',
+        border: platform==='mac' ? '0.5px solid rgba(0,122,255,0.2)' : '1px solid #F2C200',
+        display:'flex', gap:10, alignItems:'flex-start',
+        fontSize:12, lineHeight:1.5, color: platform==='mac' ? 'rgba(0,0,0,0.7)' : '#5a4a00',
+      }}>
+        {platform === 'mac' ? (
+          <svg width="14" height="14" viewBox="0 0 14 14" style={{ flexShrink:0, marginTop:1 }}>
+            <circle cx="7" cy="7" r="6.5" fill={FT.info}/>
+            <text x="7" y="10.5" textAnchor="middle" fontSize="8" fill="#fff" fontWeight="700" fontFamily="-apple-system">i</text>
+          </svg>
+        ) : (
+          <svg width="14" height="14" viewBox="0 0 14 14" style={{ flexShrink:0, marginTop:1 }}>
+            <path d="M7 1 L 13 12 L 1 12 Z" fill="#F2C200"/>
+            <rect x="6.4" y="5" width="1.2" height="4" fill="#1a1a1a"/>
+            <rect x="6.4" y="10" width="1.2" height="1.2" fill="#1a1a1a"/>
+          </svg>
+        )}
+        <span>
+          Open FindInTosh on your phone and enter this code. Expires in{' '}
+          <b style={{ color: seconds < 60 ? FT.danger : 'inherit' }}>{formatTime(seconds)}</b>
+        </span>
+      </div>
+
+      {/* Buttons */}
+      <div style={{ display:'flex', gap:8, marginTop:14 }}>
+        <button style={{
+          flex:1, height:34, borderRadius: platform==='mac' ? 8 : 4,
+          background:platform==='mac' ? 'rgba(0,0,0,0.05)' : '#fff',
+          border: platform==='mac' ? '0.5px solid rgba(0,0,0,0.1)' : '1px solid rgba(0,0,0,0.15)',
+          fontFamily:font, fontSize:13, fontWeight:500, color:'#1a1a1a', cursor:'pointer',
+        }}>
+          <span style={{ marginRight:5 }}>⊞</span>Show QR
+        </button>
+        <button onClick={handleRefresh} style={{
+          flex:1, height:34, borderRadius: platform==='mac' ? 8 : 4,
+          background: accent, border:'none', color:'#fff',
+          fontFamily:font, fontSize:13, fontWeight:600, cursor:'pointer',
+          display:'flex', alignItems:'center', justifyContent:'center', gap:6,
+        }}>
+          <span style={{ display:'inline-block', animation: spinning ? 'ft-spin 0.5s linear' : 'none' }}>↻</span>
+          Refresh
+        </button>
+      </div>
+
+      {/* Shield footer */}
+      <div style={{ marginTop:14, display:'flex', alignItems:'center', gap:6, fontSize:11, color:'rgba(0,0,0,0.45)' }}>
+        <svg width="11" height="13" viewBox="0 0 10 11" fill="rgba(0,0,0,0.4)">
+          <path d="M5 0.5 L 9 2 V 5 C 9 8 5 10 5 10 C 5 10 1 8 1 5 V 2 Z" />
+        </svg>
+        <span>Encrypted end-to-end · 192.168.1.42</span>
+      </div>
+
+      {/* Simulate button */}
+      <div style={{ marginTop:20, borderTop:'1px solid rgba(0,0,0,0.06)', paddingTop:18 }}>
+        <button onClick={handleSimulate} style={{
+          width:'100%', height:36, borderRadius: platform==='mac' ? 10 : 4,
+          background: connecting ? 'rgba(52,199,89,0.1)' : 'rgba(0,0,0,0.04)',
+          border: `1px dashed ${connecting ? FT.success : 'rgba(0,0,0,0.15)'}`,
+          fontFamily:font, fontSize:13, fontWeight:500, color: connecting ? FT.success : 'rgba(0,0,0,0.6)',
+          cursor:'pointer', transition:'all 0.2s',
+          display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+        }}>
+          {connecting ? (
+            <>
+              <span style={{ animation:'ft-spin 0.7s linear infinite', display:'inline-block' }}>⟳</span>
+              Connecting phone…
+            </>
+          ) : (
+            <>📱 Simulate phone pairing</>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ─── DOCK TAB ────────────────────────────────────────────────────────────────
+const HARDCODED_APPS = [
+  'Figma','VS Code','Chrome','Safari','Notion','Slack',
+  'Spotify','Music','Mail','Calendar','Notes','Terminal',
+  'Discord','Telegram','Xcode','Photoshop',
+];
+
+const DEFAULT_DOCK = ['Finder', 'Safari', 'Messages', 'Music', null, null, null, null];
+
+const DockTab = ({ platform, onSaveDock, dockSyncedTick }) => {
+  const [dockApps, setDockApps] = useState(DEFAULT_DOCK);
+  const [installedApps, setInstalledApps] = useState([]);
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState('All');
+  const [syncInstant, setSyncInstant] = useState(true);
+  const [savedAnim, setSavedAnim] = useState(false);
+  const [syncedAnim, setSyncedAnim] = useState(false);
+  const font = platform === 'mac' ? FT.fontApple : FT.fontWin;
+  const isServed = window.location.hostname !== '';
+
+  // Fetch real installed apps from server on mount
+  React.useEffect(() => {
+    if (!isServed) return;
+    const room = new URLSearchParams(window.location.search).get('room') || '';
+    const url  = room ? `/apps?room=${room}` : '/apps';
+    fetch(url)
+      .then(r => r.json())
+      .then(apps => setInstalledApps(apps.map(a => a.name)))
+      .catch(() => {});
+  }, []);
+
+  // Show "Synced to phone" confirmation whenever the server acknowledges
+  React.useEffect(() => {
+    if (!dockSyncedTick) return;
+    setSyncedAnim(true);
+    const t = setTimeout(() => setSyncedAnim(false), 2000);
+    return () => clearTimeout(t);
+  }, [dockSyncedTick]);
+
+  // Use fetched apps when available, else fall back to hardcoded list
+  const availableApps = installedApps.length > 0 ? installedApps : HARDCODED_APPS;
+
+  const filtered = availableApps.filter(name => {
+    if (search && !name.toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
+
+  const toggleApp = (appName) => {
+    setDockApps(prev => {
+      const idx = prev.indexOf(appName);
+      if (idx !== -1) {
+        // Already in dock → remove it
+        const next = [...prev];
+        next[idx] = null;
+        return next;
+      } else {
+        // Not in dock → add to first empty slot
+        const next = [...prev];
+        const emptyIdx = next.indexOf(null);
+        if (emptyIdx !== -1) {
+          next[emptyIdx] = appName;
+        } else {
+          next.push(appName); // dock full, append
+        }
+        return next;
+      }
+    });
+  };
+
+  const handleSave = () => {
+    setSavedAnim(true);
+    setTimeout(() => setSavedAnim(false), 1500);
+    // Send to WebSocket server if available; gracefully no-ops when disconnected
+    onSaveDock?.(dockApps);
+  };
+
+  return (
+    <div style={{ padding:20, display:'flex', flexDirection:'column', height:'100%', fontFamily:font, minHeight:0 }}>
+      <div style={{ fontSize:16, fontWeight:700, color:'#1a1a1a', marginBottom:2 }}>Phone dock</div>
+      <div style={{ fontSize:12, color:'rgba(0,0,0,0.5)', marginBottom:14 }}>Drag apps onto your phone's grid. Up to 8 per page.</div>
+
+      <div style={{ flex:1, display:'flex', gap:16, minHeight:0 }}>
+        {/* Left: available apps */}
+        <div style={{ flex:'0 0 210px', display:'flex', flexDirection:'column', minHeight:0 }}>
+          {/* Search */}
+          <div style={{
+            height:30, borderRadius: platform==='mac' ? 8 : 4,
+            background:'rgba(0,0,0,0.05)',
+            border: platform==='mac' ? '0.5px solid rgba(0,0,0,0.1)' : '1px solid rgba(0,0,0,0.15)',
+            display:'flex', alignItems:'center', padding:'0 8px', gap:6,
+            fontSize:12, color:'rgba(0,0,0,0.5)', marginBottom:8,
+          }}>
+            <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="rgba(0,0,0,0.4)" strokeWidth="1.5">
+              <circle cx="4.5" cy="4.5" r="3.5"/><path d="M7 7 L 10 10"/>
+            </svg>
+            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search apps…"
+              style={{ background:'none', border:'none', outline:'none', fontSize:12, fontFamily:font, flex:1, color:'#1a1a1a' }} />
+          </div>
+          {/* Filter pills */}
+          <div style={{ display:'flex', gap:4, marginBottom:8 }}>
+            {['All','Running','Recent'].map(f => (
+              <div key={f} onClick={() => setFilter(f)} style={{
+                padding:'3px 9px', borderRadius:999, fontSize:10, fontWeight:600, cursor:'pointer',
+                background: f===filter ? '#1a1a1a' : 'rgba(0,0,0,0.06)',
+                color: f===filter ? '#fff' : 'rgba(0,0,0,0.6)',
+                transition:'all 0.15s',
+              }}>{f}</div>
+            ))}
+          </div>
+          {/* Grid */}
+          <div style={{ flex:1, overflowY:'auto', display:'grid', gridTemplateColumns:'repeat(3, 60px)', gap:'4px 4px', alignContent:'start' }}>
+            {filtered.map(appName => {
+              const inDock = dockApps.includes(appName);
+              return (
+                <div key={appName} onClick={() => toggleApp(appName)} style={{
+                  width:60, padding:'6px 4px', borderRadius:8, cursor:'pointer',
+                  display:'flex', flexDirection:'column', alignItems:'center', gap:4,
+                  background: inDock ? 'rgba(255,122,69,0.08)' : 'transparent',
+                  transition:'all 0.15s',
+                  outline: inDock ? `2px solid ${FT.accent}` : '2px solid transparent',
+                  outlineOffset:'-1px',
+                }}>
+                  <RealIcon name={appName} size={42} />
+                  <span style={{ fontFamily:font, fontSize:9, color:'rgba(0,0,0,0.65)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', maxWidth:52 }}>{appName}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Right: phone preview */}
+        <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center' }}>
+          <div style={{ fontFamily:font, fontSize:13, fontWeight:600, color:'rgba(0,0,0,0.7)', marginBottom:2, alignSelf:'flex-start' }}>Your phone dock</div>
+          <MiniPhonePreview filled={dockApps} width={280} />
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div style={{ marginTop:12, borderTop:'1px solid rgba(0,0,0,0.06)', paddingTop:12, display:'flex', alignItems:'center', gap:10, fontSize:12 }}>
+        <label style={{ display:'flex', alignItems:'center', gap:7, cursor:'pointer', color:'rgba(0,0,0,0.65)' }}>
+          <Toggle checked={syncInstant} onChange={setSyncInstant} win={platform==='win'} />
+          Sync changes instantly to phone
+        </label>
+        <div style={{ flex:1 }} />
+        <button style={{ background:'none', border:'none', fontFamily:font, fontSize:12, color:'rgba(0,0,0,0.35)', cursor:'pointer' }}
+          onClick={() => setDockApps(DEFAULT_DOCK)}>Reset to defaults</button>
+        {syncedAnim && (
+          <span style={{
+            fontSize:12, fontWeight:600, color:FT.success,
+            display:'flex', alignItems:'center', gap:4,
+            animation:'ft-slide-up 0.2s ease',
+          }}>
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke={FT.success} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M 2 7 L 5.5 10 L 11 3"/>
+            </svg>
+            Synced to phone
+          </span>
+        )}
+        <button onClick={handleSave} style={{
+          height:28, padding:'0 14px', borderRadius: platform==='mac' ? 7 : 4,
+          background: savedAnim ? FT.success : FT.accent,
+          border:'none', color:'#fff', fontFamily:font, fontSize:12, fontWeight:600, cursor:'pointer',
+          boxShadow: savedAnim ? FT.shadowGreenCTA : FT.shadowCTA,
+          transition:'background 0.2s',
+        }}>
+          {savedAnim ? '✓ Saved!' : 'Save dock'}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ─── HOTKEYS TAB ─────────────────────────────────────────────────────────────
+const HOTKEYS_INIT = [
+  { icon:'⌨', action:'Focus phone dock',    mac:'⌘⇧P', win:'Ctrl+Shift+P' },
+  { icon:'💻', action:'Switch to Mac',       mac:'⌘1',   win:'Ctrl+1' },
+  { icon:'🪟', action:'Switch to PC',        mac:'⌘2',   win:'Ctrl+2' },
+  { icon:'🔲', action:'Toggle overlay',      mac:'⌘⇧O', win:'Ctrl+Shift+O' },
+  { icon:'↻',  action:'Refresh connection',  mac:'⌘R',   win:'Ctrl+R' },
+];
+
+const HotkeysTab = ({ platform }) => {
+  const [hotkeys, setHotkeys] = useState(HOTKEYS_INIT);
+  const [editing, setEditing] = useState(null);
+  const [editVal, setEditVal] = useState('');
+  const font = platform === 'mac' ? FT.fontApple : FT.fontWin;
+
+  const startEdit = (i) => {
+    setEditing(i);
+    setEditVal(platform === 'mac' ? hotkeys[i].mac : hotkeys[i].win);
+  };
+
+  const handleKeyDown = (e, i) => {
+    e.preventDefault();
+    const parts = [];
+    if (e.ctrlKey || e.metaKey) parts.push(platform==='mac' ? '⌘' : 'Ctrl');
+    if (e.altKey) parts.push(platform==='mac' ? '⌥' : 'Alt');
+    if (e.shiftKey) parts.push(platform==='mac' ? '⇧' : 'Shift');
+    const key = e.key.length === 1 ? e.key.toUpperCase() : e.key;
+    if (!['Control','Meta','Alt','Shift'].includes(e.key)) {
+      parts.push(key);
+      const combo = platform==='mac' ? parts.join('') : parts.join('+');
+      setHotkeys(prev => prev.map((h,idx) => idx===i
+        ? { ...h, [platform==='mac' ? 'mac' : 'win']: combo }
+        : h
+      ));
+      setEditing(null);
+    }
+  };
+
+  return (
+    <div style={{ padding:24, fontFamily:font }}>
+      <div style={{ fontSize:17, fontWeight:700, color:'#1a1a1a', marginBottom:4 }}>Keyboard shortcuts</div>
+      <div style={{ fontSize:12, color:'rgba(0,0,0,0.5)', marginBottom:20 }}>Trigger any action from your computer keyboard.</div>
+      <div style={{ display:'flex', flexDirection:'column', gap:0 }}>
+        {hotkeys.map((h, i) => (
+          <div key={i} style={{
+            display:'flex', alignItems:'center', gap:12, padding:'12px 0',
+            borderBottom:'1px solid rgba(0,0,0,0.06)',
+          }}>
+            <span style={{ fontSize:18, width:28, textAlign:'center' }}>{h.icon}</span>
+            <span style={{ flex:1, fontSize:13, fontWeight:500, color:'#1a1a1a' }}>{h.action}</span>
+            {editing === i ? (
+              <input autoFocus onKeyDown={e => handleKeyDown(e, i)}
+                onChange={() => {}} value={editVal}
+                placeholder="Press keys…"
+                style={{
+                  width:140, height:30, borderRadius: platform==='mac' ? 6 : 3,
+                  border: `1.5px solid ${platform==='mac' ? FT.info : FT.winBlue}`,
+                  fontFamily: platform==='mac' ? FT.fontMonoApple : FT.fontMonoWin,
+                  fontSize:12, padding:'0 10px', outline:'none', background:'white',
+                  boxShadow:`0 0 0 3px ${platform==='mac' ? 'rgba(0,122,255,0.15)' : 'rgba(0,103,184,0.15)'}`,
+                }} />
+            ) : (
+              <div style={{
+                padding:'4px 10px', borderRadius: platform==='mac' ? 6 : 3,
+                background:'rgba(0,0,0,0.06)', border:'1px solid rgba(0,0,0,0.1)',
+                fontFamily: platform==='mac' ? FT.fontMonoApple : FT.fontMonoWin,
+                fontSize:12, fontWeight:600, color:'#1a1a1a',
+                minWidth:80, textAlign:'center',
+              }}>
+                {platform==='mac' ? h.mac : h.win}
+              </div>
+            )}
+            <button onClick={() => editing===i ? setEditing(null) : startEdit(i)} style={{
+              height:28, padding:'0 10px', borderRadius: platform==='mac' ? 6 : 3,
+              background: editing===i ? 'rgba(0,0,0,0.08)' : 'rgba(0,0,0,0.05)',
+              border:'1px solid rgba(0,0,0,0.1)', fontFamily:font, fontSize:12,
+              fontWeight:500, color:'rgba(0,0,0,0.65)', cursor:'pointer',
+            }}>{editing===i ? 'Cancel' : 'Edit'}</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ─── PROFILES TAB ────────────────────────────────────────────────────────────
+const PROFILES = [
+  { name:'Work', emoji:'🏢', apps:8, lastUsed:'Active now', active:true },
+  { name:'Gaming', emoji:'🎮', apps:8, lastUsed:'2 days ago', active:false },
+  { name:'Creative', emoji:'🎨', apps:6, lastUsed:'5 days ago', active:false },
+];
+
+const ProfilesTab = ({ platform }) => {
+  const [profiles, setProfiles] = useState(PROFILES);
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState('');
+  const font = platform === 'mac' ? FT.fontApple : FT.fontWin;
+  const accent = platform === 'mac' ? FT.accent : FT.winBlue;
+
+  const setActive = (idx) => {
+    setProfiles(prev => prev.map((p,i) => ({ ...p, active: i===idx })));
+  };
+
+  return (
+    <div style={{ padding:24, fontFamily:font }}>
+      <div style={{ fontSize:17, fontWeight:700, color:'#1a1a1a', marginBottom:4 }}>Profiles</div>
+      <div style={{ fontSize:12, color:'rgba(0,0,0,0.5)', marginBottom:20 }}>Switch between different dock layouts for different contexts.</div>
+      <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:16 }}>
+        {profiles.map((p, i) => (
+          <div key={i} onClick={() => setActive(i)} style={{
+            padding:'14px 16px', borderRadius: platform==='mac' ? 12 : 6,
+            border: p.active ? `1.5px solid ${accent}` : '1px solid rgba(0,0,0,0.1)',
+            background: p.active ? `${accent}0a` : 'rgba(0,0,0,0.02)',
+            display:'flex', alignItems:'center', gap:14, cursor:'pointer',
+            transition:'all 0.2s',
+          }}>
+            <span style={{ fontSize:28 }}>{p.emoji}</span>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:14, fontWeight:600, color:'#1a1a1a' }}>{p.name}</div>
+              <div style={{ fontSize:11, color:'rgba(0,0,0,0.45)', marginTop:2 }}>{p.apps} apps · Last used {p.lastUsed}</div>
+            </div>
+            {p.active && (
+              <div style={{
+                padding:'3px 10px', borderRadius:999,
+                background: accent,
+                color:'#fff', fontSize:10, fontWeight:700, letterSpacing:0.4,
+              }}>Active</div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {creating ? (
+        <div style={{
+          padding:'12px 14px', borderRadius: platform==='mac' ? 10 : 4,
+          border:'1px dashed rgba(0,0,0,0.2)', background:'rgba(0,0,0,0.02)',
+          display:'flex', gap:8, alignItems:'center',
+        }}>
+          <input autoFocus value={newName} onChange={e=>setNewName(e.target.value)}
+            placeholder="Profile name…"
+            style={{
+              flex:1, height:30, borderRadius: platform==='mac' ? 6 : 3,
+              border:`1px solid ${accent}`, padding:'0 10px',
+              fontFamily:font, fontSize:13, outline:'none',
+              boxShadow:`0 0 0 3px ${accent}20`,
+            }} />
+          <button onClick={() => {
+            if (newName.trim()) {
+              setProfiles(prev => [...prev, { name:newName.trim(), emoji:'📋', apps:0, lastUsed:'Never', active:false }]);
+            }
+            setCreating(false); setNewName('');
+          }} style={{
+            height:30, padding:'0 14px', borderRadius: platform==='mac' ? 6 : 3,
+            background:accent, border:'none', color:'#fff', fontFamily:font, fontSize:12, fontWeight:600, cursor:'pointer',
+          }}>Create</button>
+          <button onClick={() => { setCreating(false); setNewName(''); }} style={{
+            height:30, padding:'0 10px', borderRadius: platform==='mac' ? 6 : 3,
+            background:'rgba(0,0,0,0.06)', border:'1px solid rgba(0,0,0,0.1)', fontFamily:font, fontSize:12, cursor:'pointer',
+          }}>Cancel</button>
+        </div>
+      ) : (
+        <button onClick={() => setCreating(true)} style={{
+          width:'100%', height:38, borderRadius: platform==='mac' ? 10 : 4,
+          background:'rgba(0,0,0,0.04)', border:'1px dashed rgba(0,0,0,0.2)',
+          fontFamily:font, fontSize:13, fontWeight:500, color:'rgba(0,0,0,0.5)', cursor:'pointer',
+        }}>+ Create new profile</button>
+      )}
+    </div>
+  );
+};
+
+// ─── SETTINGS TAB ────────────────────────────────────────────────────────────
+const SettingsTab = ({ platform }) => {
+  const [launchLogin, setLaunchLogin] = useState(true);
+  const [showMenubar, setShowMenubar] = useState(true);
+  const [showDock, setShowDock] = useState(false);
+  const [autoDiscover, setAutoDiscover] = useState(true);
+  const [ip, setIp] = useState('192.168.1.42');
+  const [port, setPort] = useState('7342');
+  const [theme, setTheme] = useState('Auto');
+  const font = platform === 'mac' ? FT.fontApple : FT.fontWin;
+  const accent = platform === 'mac' ? FT.accent : FT.winBlue;
+
+  const SectionLabel = ({children}) => (
+    <div style={{ fontSize:10, fontWeight:700, letterSpacing:1.2, color:'rgba(0,0,0,0.38)', margin:'20px 0 8px', textTransform:'uppercase' }}>{children}</div>
+  );
+  const Row = ({label, right, sub}) => (
+    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 0', borderBottom:'1px solid rgba(0,0,0,0.05)' }}>
+      <div>
+        <div style={{ fontSize:13, fontWeight:500, color:'#1a1a1a' }}>{label}</div>
+        {sub && <div style={{ fontSize:11, color:'rgba(0,0,0,0.45)', marginTop:2 }}>{sub}</div>}
+      </div>
+      {right}
+    </div>
+  );
+
+  return (
+    <div style={{ padding:'8px 24px 24px', fontFamily:font, overflowY:'auto', height:'100%' }}>
+      <SectionLabel>General</SectionLabel>
+      <Row label="Launch at login" right={<Toggle checked={launchLogin} onChange={setLaunchLogin} win={platform==='win'} />} />
+      <Row label="Show in menu bar" right={<Toggle checked={showMenubar} onChange={setShowMenubar} win={platform==='win'} />} />
+      <Row label="Show in Dock" right={<Toggle checked={showDock} onChange={setShowDock} win={platform==='win'} />} />
+
+      <SectionLabel>Network</SectionLabel>
+      <Row label="Auto-discover on local network" right={<Toggle checked={autoDiscover} onChange={setAutoDiscover} win={platform==='win'} />} />
+      <Row label="IP address" right={
+        <input value={ip} onChange={e=>setIp(e.target.value)} style={{
+          width:130, height:26, borderRadius: platform==='mac' ? 6 : 3, border:'1px solid rgba(0,0,0,0.15)',
+          padding:'0 8px', fontFamily: platform==='mac' ? FT.fontMonoApple : FT.fontMonoWin,
+          fontSize:12, outline:'none', textAlign:'right',
+        }} />
+      } />
+      <Row label="Port" right={
+        <input value={port} onChange={e=>setPort(e.target.value)} style={{
+          width:70, height:26, borderRadius: platform==='mac' ? 6 : 3, border:'1px solid rgba(0,0,0,0.15)',
+          padding:'0 8px', fontFamily: platform==='mac' ? FT.fontMonoApple : FT.fontMonoWin,
+          fontSize:12, outline:'none', textAlign:'right',
+        }} />
+      } />
+
+      <SectionLabel>Appearance</SectionLabel>
+      <Row label="Theme" right={
+        <div style={{ display:'flex', borderRadius: platform==='mac' ? 8 : 3, overflow:'hidden', border:'1px solid rgba(0,0,0,0.12)' }}>
+          {['Dark','Light','Auto'].map(t => (
+            <button key={t} onClick={() => setTheme(t)} style={{
+              height:28, padding:'0 12px', border:'none',
+              background: t===theme ? accent : 'transparent',
+              color: t===theme ? '#fff' : 'rgba(0,0,0,0.6)',
+              fontFamily:font, fontSize:12, fontWeight: t===theme ? 600 : 400,
+              cursor:'pointer', transition:'all 0.15s',
+              borderRight: t!=='Auto' ? '1px solid rgba(0,0,0,0.1)' : 'none',
+            }}>{t}</button>
+          ))}
+        </div>
+      } />
+
+      <SectionLabel>About</SectionLabel>
+      <Row label="Version" sub="1.4.0 (build 412)" right={
+        <button style={{
+          height:28, padding:'0 12px', borderRadius: platform==='mac' ? 6 : 3,
+          background: accent, border:'none', color:'#fff',
+          fontFamily:font, fontSize:12, fontWeight:500, cursor:'pointer',
+        }}>Check for updates</button>
+      } />
+      <Row label="GitHub" right={
+        <a href="#" style={{ fontSize:12, color: accent, textDecoration:'none', fontWeight:500 }}>View source →</a>
+      } />
+      <Row label="Feedback" right={
+        <a href="#" style={{ fontSize:12, color: accent, textDecoration:'none', fontWeight:500 }}>Send feedback</a>
+      } />
+    </div>
+  );
+};
+
+// ─── MAC MENUBAR ─────────────────────────────────────────────────────────────
+const MacMenubar = ({ paired }) => {
+  const now = new Date();
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const timeStr = `${days[now.getDay()]} ${now.getDate()} ${months[now.getMonth()]}  16:32`;
+  return (
+    <div style={{
+      height:26, background:'rgba(245,243,240,0.72)',
+      backdropFilter:'blur(30px) saturate(180%)', WebkitBackdropFilter:'blur(30px) saturate(180%)',
+      borderBottom:'0.5px solid rgba(0,0,0,0.08)',
+      display:'flex', alignItems:'center', padding:'0 12px', gap:18,
+      fontFamily:FT.fontApple, fontSize:13, color:'#000',
+      position:'relative', zIndex:5, flexShrink:0,
+    }}>
+      <svg width="13" height="15" viewBox="0 0 13 15" fill="#000">
+        <path d="M10.6 7.8 C 10.6 5.9 12.2 5 12.2 5 C 11.4 3.8 10.1 3.7 9.6 3.7 C 8.5 3.6 7.4 4.4 6.9 4.4 C 6.3 4.4 5.4 3.7 4.4 3.7 C 3.1 3.7 1.9 4.5 1.2 5.8 C -0.1 8.3 0.9 12 2.2 14 C 2.8 15 3.6 16 4.6 16 C 5.5 15.9 5.9 15.4 7 15.4 C 8.1 15.4 8.4 16 9.4 16 C 10.5 16 11.2 15 11.8 14 C 12.5 12.9 12.8 11.9 12.8 11.8 C 12.8 11.8 10.6 11 10.6 7.8 Z M 8.7 2.6 C 9.2 2 9.6 1.1 9.4 0.2 C 8.7 0.2 7.7 0.7 7.2 1.3 C 6.7 1.8 6.3 2.7 6.4 3.5 C 7.2 3.6 8.1 3.1 8.7 2.6 Z" />
+      </svg>
+      <span style={{ fontWeight:600 }}>FindInTosh</span>
+      {['File','Edit','View','Window','Help'].map(m => (
+        <span key={m} style={{ opacity:0.85 }}>{m}</span>
+      ))}
+      <div style={{ flex:1 }} />
+      <div style={{ width:22,height:22, borderRadius:4, padding:2, background:'rgba(0,0,0,0.08)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+        <IconFindInTosh size={18} radius={0.25} />
+      </div>
+      <span style={{ opacity:0.85, fontSize:12 }}>88%</span>
+      <svg width="22" height="11" viewBox="0 0 22 11">
+        <rect x="0.5" y="0.5" width="18" height="10" rx="2.5" fill="none" stroke="#000" strokeOpacity="0.35"/>
+        <rect x="2" y="2" width="15" height="7" rx="1.5" fill="#000"/>
+        <rect x="19.5" y="3.5" width="1.5" height="4" rx="0.5" fill="#000" fillOpacity="0.4"/>
+      </svg>
+      <span style={{ fontSize:12, fontWeight:500 }}>Tue 14 May  16:32</span>
+    </div>
+  );
+};
+
+// ─── WINDOWS TASKBAR ─────────────────────────────────────────────────────────
+const WinTaskbar = () => (
+  <div style={{
+    height:36, background:'rgba(243,243,243,0.92)',
+    backdropFilter:'blur(40px) saturate(180%)', WebkitBackdropFilter:'blur(40px) saturate(180%)',
+    borderTop:'0.5px solid rgba(0,0,0,0.06)',
+    display:'flex', alignItems:'center', justifyContent:'center',
+    fontFamily:FT.fontWin, flexShrink:0, position:'relative',
+  }}>
+    <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+      <div style={{ width:32, height:28, display:'flex', alignItems:'center', justifyContent:'center' }}>
+        <svg width="16" height="16" viewBox="0 0 16 16">
+          <rect x="0" y="0" width="7" height="7" fill={FT.winBlue}/>
+          <rect x="9" y="0" width="7" height="7" fill={FT.winBlue}/>
+          <rect x="0" y="9" width="7" height="7" fill={FT.winBlue}/>
+          <rect x="9" y="9" width="7" height="7" fill={FT.winBlue}/>
+        </svg>
+      </div>
+      <div style={{ width:130, height:22, borderRadius:11, background:'rgba(255,255,255,0.7)', border:'0.5px solid rgba(0,0,0,0.08)', display:'flex', alignItems:'center', paddingLeft:8, gap:6, fontSize:11, color:'rgba(0,0,0,0.55)' }}>
+        <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="rgba(0,0,0,0.55)" strokeWidth="1.5"><circle cx="4.5" cy="4.5" r="3.5"/><path d="M7 7 L 10 10"/></svg>
+        <span>Search</span>
+      </div>
+      <div style={{ width:22, height:22 }}><IconChrome size={22}/></div>
+      <div style={{ width:22, height:22 }}><IconExcel size={22}/></div>
+      <div style={{ position:'relative', padding:2, borderRadius:5, background:'rgba(0,103,184,0.12)' }}>
+        <IconFindInTosh size={20} radius={0.22}/>
+        <div style={{ position:'absolute', bottom:-3, left:'50%', transform:'translateX(-50%)', width:14, height:2, borderRadius:1, background:FT.winBlue }} />
+      </div>
+      <div style={{ width:22, height:22 }}><IconTeams size={22}/></div>
+    </div>
+    <div style={{ position:'absolute', right:12, fontSize:10, color:'#1a1a1a', textAlign:'right', lineHeight:1.3 }}>
+      <div>16:32</div>
+      <div>14/05/2026</div>
+    </div>
+  </div>
+);
+
+// ─── PLATFORM TOGGLE ─────────────────────────────────────────────────────────
+const PlatformToggle = ({ platform, setPlatform }) => (
+  <div style={{
+    display:'flex', borderRadius:8, overflow:'hidden',
+    border:'1px solid rgba(0,0,0,0.15)',
+    boxShadow:'0 2px 8px rgba(0,0,0,0.12)',
+    background:'rgba(255,255,255,0.8)',
+  }}>
+    {[['mac','macOS'],['win','Windows']].map(([p, label]) => (
+      <button key={p} onClick={() => setPlatform(p)} style={{
+        height:26, padding:'0 12px',
+        background: p===platform ? (p==='mac' ? FT.accent : FT.winBlue) : 'transparent',
+        border:'none', color: p===platform ? '#fff' : 'rgba(0,0,0,0.6)',
+        fontFamily: p==='mac' ? FT.fontApple : FT.fontWin,
+        fontSize:11, fontWeight: p===platform ? 600 : 400, cursor:'pointer',
+        transition:'all 0.15s',
+        borderRight: p==='mac' ? '1px solid rgba(0,0,0,0.1)' : 'none',
+      }}>{label}</button>
+    ))}
+  </div>
+);
+
+// ─── MAC SIDEBAR ─────────────────────────────────────────────────────────────
+const MacSidebar = ({ activeTab, setActiveTab, paired }) => {
+  const items = [
+    { id:'Connection', label:'Connection', badge: paired ? '✓ paired' : null },
+    { id:'Dock', label:'Dock' },
+    { id:'Hotkeys', label:'Hotkeys' },
+    { id:'Profiles', label:'Profiles' },
+    { id:'Settings', label:'Settings' },
+  ];
+  return (
+    <div style={{
+      width:200, flexShrink:0,
+      background:'rgba(245,243,240,0.65)',
+      backdropFilter:'blur(40px) saturate(180%)',
+      WebkitBackdropFilter:'blur(40px) saturate(180%)',
+      padding:'12px 8px',
+      fontFamily:FT.fontApple, fontSize:13, color:'#1a1a1a',
+      borderRight:'0.5px solid rgba(0,0,0,0.06)',
+    }}>
+      {items.map(it => (
+        <div key={it.id} onClick={() => setActiveTab(it.id)} style={{
+          display:'flex', alignItems:'center', justifyContent:'space-between',
+          padding:'7px 10px', borderRadius:7, cursor:'pointer',
+          background: it.id===activeTab ? 'rgba(255,122,69,0.15)' : 'transparent',
+          color: it.id===activeTab ? FT.accent : '#1a1a1a',
+          fontWeight: it.id===activeTab ? 600 : 500,
+          marginBottom:2, transition:'background 0.12s',
+        }}>
+          <span>{it.label}</span>
+          {it.badge && <span style={{ fontSize:9, color:FT.success, fontWeight:600 }}>{it.badge}</span>}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// ─── WINDOWS SIDEBAR ─────────────────────────────────────────────────────────
+const WinSidebar = ({ activeTab, setActiveTab, paired }) => {
+  const items = [
+    { id:'Connection', label:'Connect' },
+    { id:'Dock', label:'Dock' },
+    { id:'Hotkeys', label:'Hotkeys' },
+    { id:'Profiles', label:'Profiles' },
+    { id:'Settings', label:'Settings' },
+  ];
+  return (
+    <div style={{
+      width:140, flexShrink:0, padding:'10px 0',
+      background:'#FAFAFA', borderRight:'0.5px solid rgba(0,0,0,0.07)',
+      fontFamily:FT.fontWin,
+    }}>
+      {items.map(it => (
+        <div key={it.id} onClick={() => setActiveTab(it.id)} style={{
+          padding:'7px 14px', fontSize:13,
+          color: it.id===activeTab ? FT.winBlue : '#1a1a1a',
+          borderLeft:`3px solid ${it.id===activeTab ? FT.winBlue : 'transparent'}`,
+          background: it.id===activeTab ? 'rgba(0,103,184,0.08)' : 'transparent',
+          fontWeight: it.id===activeTab ? 600 : 400,
+          cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'space-between',
+        }}>
+          <span>{it.label}</span>
+          {it.id==='Connection' && paired && <span style={{ fontSize:8, color:FT.success, fontWeight:700 }}>●</span>}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// ─── TRAFFIC LIGHTS ─────────────────────────────────────────────────────────
+const MacTrafficLights = () => (
+  <div style={{ display:'flex', gap:6, padding:'0 12px' }}>
+    {['#FF5F57','#FEBC2E','#28C840'].map(c => (
+      <div key={c} style={{ width:11, height:11, borderRadius:6, background:c, border:'0.5px solid rgba(0,0,0,0.1)' }} />
+    ))}
+  </div>
+);
+
+// ─── TAB CONTENT ROUTER ──────────────────────────────────────────────────────
+const TabContent = ({ tab, platform, paired, setPaired, pairingCode, onRefresh, onSaveDock, dockSyncedTick }) => {
+  switch (tab) {
+    case 'Connection': return <ConnectionTab platform={platform} paired={paired} setPaired={setPaired} pairingCode={pairingCode} onRefresh={onRefresh} />;
+    case 'Dock':       return <DockTab platform={platform} onSaveDock={onSaveDock} dockSyncedTick={dockSyncedTick} />;
+    case 'Hotkeys':    return <HotkeysTab platform={platform} />;
+    case 'Profiles':   return <ProfilesTab platform={platform} />;
+    case 'Settings':   return <SettingsTab platform={platform} />;
+    default:           return null;
+  }
+};
+
+// ─── MAC APP WINDOW ──────────────────────────────────────────────────────────
+const MacApp = ({ activeTab, setActiveTab, paired, setPaired, pairingCode, onRefresh, onSaveDock, dockSyncedTick }) => (
+  <div style={{ display:'flex', flexDirection:'column', height:'100%', background:FT.macWall }}>
+    <MacMenubar paired={paired} />
+    <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', padding:20, minHeight:0 }}>
+      <div style={{
+        width:'100%', maxWidth:860, height:'100%', maxHeight:560,
+        borderRadius:12, overflow:'hidden',
+        background:'rgba(255,255,255,0.75)',
+        backdropFilter:'blur(40px) saturate(180%)',
+        WebkitBackdropFilter:'blur(40px) saturate(180%)',
+        boxShadow:'0 30px 60px rgba(0,0,0,0.22), 0 0 0 0.5px rgba(0,0,0,0.1)',
+        display:'flex', flexDirection:'column',
+      }}>
+        {/* Title bar */}
+        <div style={{
+          height:30, display:'flex', alignItems:'center',
+          borderBottom:'0.5px solid rgba(0,0,0,0.07)',
+          background:'rgba(245,243,240,0.55)', flexShrink:0,
+        }}>
+          <MacTrafficLights />
+          <div style={{ flex:1, textAlign:'center', fontSize:12, fontWeight:600, color:'rgba(0,0,0,0.65)' }}>
+            FindInTosh — {activeTab}
+          </div>
+          <div style={{ width:88 }} />
+        </div>
+        {/* Body */}
+        <div style={{ flex:1, display:'flex', overflow:'hidden', minHeight:0 }}>
+          <MacSidebar activeTab={activeTab} setActiveTab={setActiveTab} paired={paired} />
+          <div style={{ flex:1, overflowY:'auto', minWidth:0 }}>
+            <TabContent tab={activeTab} platform="mac" paired={paired} setPaired={setPaired} pairingCode={pairingCode} onRefresh={onRefresh} onSaveDock={onSaveDock} dockSyncedTick={dockSyncedTick} />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+// ─── WINDOWS APP WINDOW ──────────────────────────────────────────────────────
+const WinApp = ({ activeTab, setActiveTab, paired, setPaired, pairingCode, onRefresh, onSaveDock, dockSyncedTick }) => (
+  <div style={{ display:'flex', flexDirection:'column', height:'100%', background:FT.winWall }}>
+    <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', padding:'16px 16px 4px', minHeight:0 }}>
+      <div style={{
+        width:'100%', maxWidth:860, height:'100%', maxHeight:560,
+        borderRadius:8, overflow:'hidden',
+        background:'#fff',
+        boxShadow:'0 24px 60px rgba(0,0,0,0.45), 0 0 0 1px rgba(0,0,0,0.07)',
+        display:'flex', flexDirection:'column',
+      }}>
+        {/* Win title bar */}
+        <div style={{
+          height:32, display:'flex', alignItems:'center', padding:'0 0 0 12px',
+          fontFamily:FT.fontWin, fontSize:12, color:'#1a1a1a',
+          borderBottom:'0.5px solid rgba(0,0,0,0.08)',
+          background:'rgba(255,255,255,0.96)', flexShrink:0,
+        }}>
+          <div style={{ width:16, height:16, marginRight:8 }}>
+            <IconFindInTosh size={16} radius={0.22} />
+          </div>
+          <span style={{ fontWeight:500 }}>FindInTosh</span>
+          <div style={{ flex:1 }} />
+          {[['—','hover:bg-gray'],['□','hover:bg-gray'],['×','close']].map(([g], i) => (
+            <div key={i} style={{
+              width:36, height:32, display:'flex', alignItems:'center', justifyContent:'center',
+              fontSize: i===2 ? 14 : 11, cursor:'default',
+              color:'#1a1a1a',
+            }}>{g}</div>
+          ))}
+        </div>
+        {/* Body */}
+        <div style={{ flex:1, display:'flex', overflow:'hidden', minHeight:0 }}>
+          <WinSidebar activeTab={activeTab} setActiveTab={setActiveTab} paired={paired} />
+          <div style={{ flex:1, overflowY:'auto', minWidth:0 }}>
+            <TabContent tab={activeTab} platform="win" paired={paired} setPaired={setPaired} pairingCode={pairingCode} onRefresh={onRefresh} onSaveDock={onSaveDock} dockSyncedTick={dockSyncedTick} />
+          </div>
+        </div>
+      </div>
+    </div>
+    <WinTaskbar />
+  </div>
+);
+
+// ─── ROOT APP ────────────────────────────────────────────────────────────────
+const App = () => {
+  const [platform, setPlatform] = useState('mac');
+  const [activeTab, setActiveTab] = useState('Connection');
+  const [paired, setPaired] = useState(false);
+  const [pairingCode, setPairingCode] = useState(['7','3','F','K','9','2']); // fallback
+  const [phonePaired, setPhonePaired] = useState(false);
+  const [lastLaunch, setLastLaunch] = useState(null); // { app, appName, time }
+  const [dockSyncedTick, setDockSyncedTick] = useState(0); // incremented on dock_saved
+
+  const ws = useDesktopWS({
+    onInit: (msg) => {
+      setPairingCode(msg.code);
+      setPhonePaired(msg.paired);
+    },
+    onPhoneConnected: () => setPhonePaired(true),
+    onPhoneDisconnected: () => setPhonePaired(false),
+    onLaunching: (msg) => {
+      setLastLaunch({ app: msg.app, appName: msg.appName, time: Date.now() });
+      setTimeout(() => setLastLaunch(null), 3000);
+    },
+    onDockSaved: () => setDockSyncedTick(t => t + 1),
+    onDockConfig: () => {}, // no-op slot for future real-time dock updates from server
+  });
+
+  // Callback passed to DockTab — sends dock to server when WS is connected, silently skips when not
+  const handleSaveDock = React.useCallback((apps) => {
+    ws.send({ type: 'save_dock', apps });
+  }, [ws.send]);
+
+  // Merge WS paired state with local demo paired state
+  const effectivePaired = paired || phonePaired;
+  const setEffectivePaired = (val) => {
+    setPaired(val);
+    if (!val) setPhonePaired(false);
+  };
+
+  // Only show WS indicator when running from a real server (not file://)
+  const isLive = typeof window !== 'undefined' && window.location.hostname !== '';
+
+  // WS status pill colors/labels
+  const wsIndicator = (() => {
+    if (ws.wsState === 'connected' && effectivePaired) return { dot: '#34C759', label: 'Live' };
+    if (ws.wsState === 'connected')                    return { dot: '#007AFF', label: 'Server' };
+    return { dot: '#8E8E93', label: 'Offline' };
+  })();
+
+  return (
+    <div style={{ width:'100vw', height:'100vh', position:'relative', overflow:'hidden' }}>
+      {/* Platform toggle — top right corner, floating above everything */}
+      <div style={{ position:'absolute', top:platform==='mac' ? 34 : 42, right:20, zIndex:100 }}>
+        <PlatformToggle platform={platform} setPlatform={p => { setPlatform(p); setActiveTab('Connection'); }} />
+      </div>
+
+      {/* WS status indicator */}
+      {isLive && (
+        <div style={{
+          position:'fixed', top:8, right:70, zIndex:9999,
+          display:'flex', alignItems:'center', gap:5,
+          padding:'3px 9px', borderRadius:999,
+          background:'rgba(0,0,0,0.55)',
+          backdropFilter:'blur(12px)',
+          fontFamily:FT.fontApple, fontSize:11, fontWeight:600, color:'#fff',
+          pointerEvents:'none',
+        }}>
+          <span style={{
+            width:6, height:6, borderRadius:3,
+            background: wsIndicator.dot,
+            display:'inline-block',
+            boxShadow: ws.wsState === 'connected' ? `0 0 0 0 ${wsIndicator.dot}` : 'none',
+            animation: ws.wsState === 'connected' && effectivePaired ? 'ft-pulse-green 1.6s ease-out infinite' : 'none',
+          }} />
+          {wsIndicator.label}
+        </div>
+      )}
+
+      {/* Launch toast */}
+      {lastLaunch && (
+        <div style={{
+          position:'fixed', bottom:60, right:20, zIndex:9999,
+          padding:'10px 16px', borderRadius:10,
+          background:'rgba(28,28,32,0.95)',
+          backdropFilter:'blur(20px)',
+          border:'0.5px solid rgba(255,255,255,0.1)',
+          boxShadow:'0 8px 32px rgba(0,0,0,0.4)',
+          fontFamily:'-apple-system, system-ui', fontSize:13, color:'#fff',
+          display:'flex', alignItems:'center', gap:10,
+          animation:'ft-slide-up 0.22s cubic-bezier(0.2,0.8,0.2,1)',
+        }}>
+          <AppIcon id={lastLaunch.app} size={28} />
+          <span>Launching <b>{lastLaunch.appName}</b></span>
+        </div>
+      )}
+
+      {platform === 'mac'
+        ? <MacApp activeTab={activeTab} setActiveTab={setActiveTab} paired={effectivePaired} setPaired={setEffectivePaired} pairingCode={pairingCode} onRefresh={() => ws.send({ type: 'refresh_code' })} onSaveDock={handleSaveDock} dockSyncedTick={dockSyncedTick} />
+        : <WinApp activeTab={activeTab} setActiveTab={setActiveTab} paired={effectivePaired} setPaired={setEffectivePaired} pairingCode={pairingCode} onRefresh={() => ws.send({ type: 'refresh_code' })} onSaveDock={handleSaveDock} dockSyncedTick={dockSyncedTick} />
+      }
+    </div>
+  );
+};
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+</body>
+</html>

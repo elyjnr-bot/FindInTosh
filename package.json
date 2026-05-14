@@ -1,0 +1,14 @@
+{
+  "name": "findintosh",
+  "version": "1.0.0",
+  "description": "Your phone, but for your computer.",
+  "main": "relay.js",
+  "scripts": {
+    "start": "node relay.js",
+    "local": "node server.js",
+    "agent": "node agent.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
