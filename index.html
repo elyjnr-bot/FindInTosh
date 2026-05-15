@@ -1,383 +1,968 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FindInTosh — Your phone, but for your Mac</title>
+  <title>FindInTosh — Votre Mac, sur le cote</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
-    :root {
-      --bg:      #0a0a0f;
-      --surface: rgba(255,255,255,0.05);
-      --border:  rgba(255,255,255,0.1);
-      --accent:  #6c63ff;
-      --accent2: #a78bfa;
-      --text:    #f0f0f5;
-      --muted:   rgba(240,240,245,0.5);
-    }
-
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
     body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
-      min-height: 100vh;
+      font-family: -apple-system, "SF Pro Display", "SF Pro Text", system-ui, BlinkMacSystemFont, sans-serif;
+      background: #f0eee9;
+      color: #1a1611;
       overflow-x: hidden;
     }
-
-    body::before {
-      content: '';
-      position: fixed; inset: 0;
-      background:
-        radial-gradient(ellipse 80% 50% at 20% 20%, rgba(108,99,255,0.15) 0%, transparent 60%),
-        radial-gradient(ellipse 60% 40% at 80% 80%, rgba(167,139,250,0.1) 0%, transparent 60%);
-      pointer-events: none;
+    @keyframes ft-pulse-green {
+      0%   { box-shadow: 0 0 0 0 rgba(52,199,89,0.7); }
+      70%  { box-shadow: 0 0 0 8px rgba(52,199,89,0); }
+      100% { box-shadow: 0 0 0 0 rgba(52,199,89,0); }
     }
-
-    nav {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 20px 40px;
-      border-bottom: 1px solid var(--border);
-      backdrop-filter: blur(12px);
-      position: sticky; top: 0; z-index: 10;
+    @keyframes ft-pulse-orange {
+      0%   { transform: scale(1);    opacity: 1; }
+      50%  { transform: scale(1.04); opacity: 0.95; }
+      100% { transform: scale(1);    opacity: 1; }
     }
-    .logo { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; }
-    .logo span { color: var(--accent2); }
-    .nav-links { display: flex; gap: 24px; }
-    .nav-links a {
-      color: var(--muted); text-decoration: none; font-size: 14px;
-      transition: color .2s;
+    @keyframes ft-blink {
+      0%, 49% { opacity: 1; }
+      50%, 100% { opacity: 0; }
     }
-    .nav-links a:hover { color: var(--text); }
-
-    .hero {
-      text-align: center;
-      padding: 100px 40px 80px;
-      max-width: 760px;
-      margin: 0 auto;
+    @keyframes float-phone {
+      0%, 100% { transform: translate(-50%, -50%) rotate(-3deg) translateY(0px); }
+      50%       { transform: translate(-50%, -50%) rotate(-3deg) translateY(-8px); }
     }
-    .hero-badge {
-      display: inline-block;
-      background: rgba(108,99,255,0.15);
-      border: 1px solid rgba(108,99,255,0.3);
-      color: var(--accent2);
-      font-size: 12px; font-weight: 600; letter-spacing: 1px;
-      padding: 6px 14px; border-radius: 100px;
-      margin-bottom: 28px;
-      text-transform: uppercase;
-    }
-    .hero h1 {
-      font-size: clamp(40px, 7vw, 68px);
-      font-weight: 800;
-      letter-spacing: -2px;
-      line-height: 1.05;
-      margin-bottom: 20px;
-    }
-    .hero h1 em {
-      font-style: normal;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    .hero p {
-      font-size: 18px;
-      color: var(--muted);
-      line-height: 1.6;
-      max-width: 500px;
-      margin: 0 auto 48px;
-    }
-
-    .cta-group { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
-    .btn-primary {
-      display: inline-flex; align-items: center; gap: 10px;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      color: #fff; font-weight: 700; font-size: 15px;
-      padding: 14px 28px; border-radius: 14px;
-      text-decoration: none;
-      box-shadow: 0 0 30px rgba(108,99,255,0.4);
-      transition: transform .2s, box-shadow .2s;
-    }
-    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 40px rgba(108,99,255,0.6); }
-    .btn-secondary {
-      display: inline-flex; align-items: center; gap: 10px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      color: var(--text); font-weight: 600; font-size: 15px;
-      padding: 14px 28px; border-radius: 14px;
-      text-decoration: none;
-      transition: background .2s, transform .2s;
-    }
-    .btn-secondary:hover { background: rgba(255,255,255,0.08); transform: translateY(-2px); }
-
-    .install-box {
-      background: rgba(255,255,255,0.04);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 16px 20px;
-      max-width: 560px;
-      margin: 0 auto;
-      text-align: left;
-    }
-    .install-label {
-      display: flex; align-items: center; gap: 7px;
-      font-size: 12px; font-weight: 600; color: var(--muted);
-      letter-spacing: 0.3px;
-      margin-bottom: 10px;
-    }
-    .install-cmd-row {
-      display: flex; align-items: center; gap: 10px;
-    }
-    .install-cmd {
-      flex: 1;
-      font-family: 'SF Mono', 'Fira Code', monospace;
-      font-size: 13px;
-      color: var(--accent2);
-      background: none;
-      border: none;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .copy-btn {
-      flex-shrink: 0;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      color: #fff; font-weight: 700; font-size: 13px;
-      padding: 8px 18px; border-radius: 10px;
-      border: none; cursor: pointer;
-      transition: opacity .2s, transform .15s;
-    }
-    .copy-btn:hover { opacity: .9; transform: translateY(-1px); }
-    .copy-btn.copied { background: #34C759; }
-    .install-note {
-      font-size: 12px; color: var(--muted);
-      margin-top: 14px; line-height: 1.6;
-    }
-    .install-note strong { color: var(--text); }
-
-    .steps-section {
-      max-width: 900px; margin: 0 auto;
-      padding: 0 40px 100px;
-    }
-    .section-label {
-      text-align: center;
-      font-size: 12px; font-weight: 700; letter-spacing: 2px;
-      text-transform: uppercase; color: var(--muted);
-      margin-bottom: 14px;
-    }
-    .section-title {
-      text-align: center;
-      font-size: clamp(24px, 4vw, 36px);
-      font-weight: 800; letter-spacing: -1px;
-      margin-bottom: 60px;
-    }
-    .steps {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 20px;
-    }
-    .step {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 28px;
-      backdrop-filter: blur(8px);
-    }
-    .step-num {
-      width: 36px; height: 36px;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 15px; font-weight: 800;
-      margin-bottom: 16px;
-    }
-    .step h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
-    .step p { font-size: 14px; color: var(--muted); line-height: 1.5; }
-    .step-tip {
-      display: flex; align-items: flex-start; gap: 8px;
-      background: rgba(251,191,36,0.08);
-      border: 1px solid rgba(251,191,36,0.2);
-      border-radius: 10px;
-      padding: 10px 12px;
-      margin-top: 10px;
-      font-size: 13px; color: rgba(251,191,36,0.9);
-      line-height: 1.4;
-    }
-    .step-tip svg { flex-shrink: 0; margin-top: 1px; }
-    .step code {
-      display: inline-block;
-      background: rgba(255,255,255,0.08);
-      border: 1px solid var(--border);
-      padding: 2px 8px; border-radius: 6px;
-      font-size: 13px; font-family: 'SF Mono', monospace;
-      color: var(--accent2);
-    }
-
-    .already {
-      max-width: 500px; margin: 0 auto;
-      padding: 0 40px 100px;
-      text-align: center;
-    }
-    .already h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
-    .already p { color: var(--muted); font-size: 14px; margin-bottom: 28px; }
-    .room-input {
-      width: 100%;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      color: var(--text); font-size: 20px; font-weight: 700;
-      letter-spacing: 4px; text-align: center;
-      padding: 16px 20px; border-radius: 14px;
-      outline: none; margin-bottom: 12px;
-      transition: border-color .2s;
-    }
-    .room-input::placeholder { color: var(--muted); letter-spacing: 1px; font-weight: 400; font-size: 15px; }
-    .room-input:focus { border-color: var(--accent); }
-    .open-btns {
-      display: flex; gap: 10px; flex-wrap: wrap;
-    }
-    .open-btn {
-      flex: 1;
-      padding: 13px 20px;
-      border-radius: 12px;
-      font-size: 14px; font-weight: 600;
-      cursor: pointer; border: none; text-decoration: none;
-      text-align: center;
-      transition: transform .15s, opacity .15s;
-    }
-    .open-btn:hover { transform: translateY(-1px); }
-    .btn-mac {
-      background: rgba(108,99,255,0.2);
-      border: 1px solid rgba(108,99,255,0.4);
-      color: var(--accent2);
-    }
-    .btn-phone {
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      color: #fff;
-    }
-
-    footer {
-      text-align: center;
-      padding: 40px;
-      color: var(--muted);
-      font-size: 13px;
-      border-top: 1px solid var(--border);
-    }
-
-    @media (max-width: 600px) {
-      nav { padding: 16px 20px; }
-      .hero { padding: 60px 20px 60px; }
-      .steps-section, .already { padding-left: 20px; padding-right: 20px; }
-    }
+    ::selection { background: rgba(255,122,69,0.25); }
   </style>
 </head>
 <body>
+  <div id="root"></div>
 
-<nav>
-  <div class="logo">Find<span>In</span>Tosh</div>
-  <div class="nav-links">
-    <a href="#install">Install</a>
-    <a href="#already">Open app</a>
-  </div>
-</nav>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"></script>
 
-<section class="hero">
-  <div class="hero-badge">Mac + iPhone</div>
-  <h1>Your phone,<br>but for your <em>Mac</em></h1>
-  <p>Turn your iPhone into an instant app launcher for your Mac. One tap — any app opens, instantly.</p>
-  <div class="install-box">
-    <div class="install-label">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-      Open Terminal on your Mac, paste this:
-    </div>
-    <div class="install-cmd-row">
-      <code class="install-cmd" id="installCmd">curl -fsSL https://findintosh-production.up.railway.app/install.sh -o /tmp/ft.sh && bash /tmp/ft.sh</code>
-      <button class="copy-btn" id="copyBtn" onclick="copyInstall()">Copy</button>
-    </div>
-  </div>
-  <p class="install-note">
-    <strong>Free &amp; open source.</strong> Requires macOS 12+. Node.js installed automatically.
-    <br>After ~30 seconds, your browser opens automatically. <a href="#already" style="color:var(--accent2)">Already installed?</a>
-  </p>
-</section>
+  <script type="text/babel">
+    const { useState, useEffect, useCallback } = React;
 
-<section class="steps-section" id="install">
-  <div class="section-label">Get started</div>
-  <div class="section-title">Up and running in 3 steps</div>
-  <div class="steps">
-    <div class="step">
-      <div class="step-num">1</div>
-      <h3>Copy &amp; run in Terminal</h3>
-      <p>Click <strong style="color:var(--text)">Copy</strong> above, open Terminal (<code>⌘ Space</code> → "Terminal"), paste and press Enter. Takes ~30 seconds — then close Terminal.</p>
-    </div>
-    <div class="step">
-      <div class="step-num">2</div>
-      <h3>Browser opens automatically</h3>
-      <p>Your Mac control panel opens in the browser with a <code>pairing code</code>. The agent runs silently in the background from now on.</p>
-    </div>
-    <div class="step">
-      <div class="step-num">3</div>
-      <h3>Pair your iPhone</h3>
-      <p>The Mac app shows you a mobile link. Open it on your iPhone, enter the code — you're connected and ready to launch any app.</p>
-    </div>
-  </div>
-</section>
+    // ─── TOKENS ──────────────────────────────────────────────────────────
+    const ORANGE       = '#FF7A45';
+    const ORANGE_GRAD  = 'linear-gradient(135deg, #FF8E5C 0%, #FF4A1F 100%)';
+    const TEXT_BLACK   = '#1a1611';
+    const CREAM        = '#f0eee9';
+    const PAIR         = ['7','3','F','K','9','2'];
+    const SUCCESS      = '#34C759';
+    const FONT_MONO    = '"SF Mono", ui-monospace, Menlo, "Cascadia Mono", Consolas, monospace';
 
-<section class="already" id="already">
-  <h2>Already installed?</h2>
-  <p>Enter your Room ID (shown in the Mac app) to open the apps directly.</p>
-  <input
-    type="text"
-    class="room-input"
-    id="roomInput"
-    maxlength="6"
-    placeholder="Enter Room ID"
-    autocomplete="off"
-    autocorrect="off"
-    autocapitalize="characters"
-    spellcheck="false"
-  />
-  <div class="open-btns">
-    <a href="#" class="open-btn btn-mac" id="openMac">Open on Mac</a>
-    <a href="#" class="open-btn btn-phone" id="openPhone">Open on iPhone</a>
-  </div>
-</section>
+    const MAC_WP = `
+      radial-gradient(circle at 20% 30%, rgba(255,180,200,0.55) 0%, transparent 45%),
+      radial-gradient(circle at 80% 20%, rgba(255,210,160,0.65) 0%, transparent 50%),
+      radial-gradient(circle at 70% 80%, rgba(180,200,255,0.45) 0%, transparent 55%),
+      radial-gradient(circle at 30% 75%, rgba(255,170,140,0.4) 0%, transparent 50%),
+      linear-gradient(135deg, #c4d9f5 0%, #f0c2c9 50%, #ffd3a8 100%)
+    `;
+    const WIN_WP = `
+      radial-gradient(circle at 50% 55%, rgba(120,170,255,0.45) 0%, transparent 50%),
+      radial-gradient(circle at 20% 20%, rgba(80,130,220,0.35) 0%, transparent 55%),
+      linear-gradient(135deg, #0c1d36 0%, #1a3b73 55%, #4a7bc8 100%)
+    `;
 
-<footer>
-  FindInTosh — open source
-</footer>
+    // ─── LOGO ────────────────────────────────────────────────────────────
+    function FitLogo({ size = 30 }) {
+      return (
+        <div style={{
+          width: size, height: size,
+          background: ORANGE_GRAD,
+          borderRadius: size * 0.22,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          flexShrink: 0,
+          boxShadow: '0 2px 8px rgba(255,122,69,0.35)',
+        }}>
+          <svg width={size * 0.6} height={size * 0.6} viewBox="0 0 18 18" fill="none">
+            <rect x="2" y="2" width="6" height="6" rx="1.5" fill="rgba(255,255,255,0.9)" />
+            <rect x="10" y="2" width="6" height="6" rx="1.5" fill="rgba(255,255,255,0.55)" />
+            <rect x="2" y="10" width="6" height="6" rx="1.5" fill="rgba(255,255,255,0.55)" />
+            <rect x="10" y="10" width="6" height="6" rx="1.5" fill="rgba(255,255,255,0.9)" />
+          </svg>
+        </div>
+      );
+    }
 
-<script>
-  function copyInstall() {
-    const cmd = document.getElementById('installCmd').textContent;
-    navigator.clipboard.writeText(cmd).then(() => {
-      const btn = document.getElementById('copyBtn');
-      btn.textContent = 'Copied!';
-      btn.classList.add('copied');
-      setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
-    });
-  }
+    // ─── APP ICONS ───────────────────────────────────────────────────────
+    function AppIconShell({ size, bg, children, shadow = true }) {
+      const br = size * 0.22;
+      return (
+        <div style={{
+          width: size, height: size, borderRadius: br, overflow: 'hidden',
+          position: 'relative', flexShrink: 0,
+          background: bg,
+          boxShadow: shadow ? `0 1px 1px rgba(0,0,0,0.25), 0 ${size*0.08}px ${size*0.18}px rgba(0,0,0,0.35)` : 'none',
+        }}>
+          {children}
+          <div style={{
+            position: 'absolute', inset: 0, borderRadius: 'inherit', pointerEvents: 'none',
+            background: 'linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 30%, rgba(0,0,0,0.08) 100%)',
+          }} />
+        </div>
+      );
+    }
 
-  const roomInput = document.getElementById('roomInput');
-  const openMac   = document.getElementById('openMac');
-  const openPhone = document.getElementById('openPhone');
+    const ICONS = {
+      launchpad: (size) => (
+        <AppIconShell size={size} bg="linear-gradient(135deg, #4a4a4f 0%, #1c1c1e 100%)">
+          <div style={{ width:'100%', height:'100%', display:'grid', gridTemplateColumns:'1fr 1fr', gap: size*0.06, padding: size*0.22, boxSizing:'border-box' }}>
+            <div style={{ background:'rgba(255,255,255,0.92)', borderRadius: size*0.04 }} />
+            <div style={{ background:'rgba(255,255,255,0.55)', borderRadius: size*0.04 }} />
+            <div style={{ background:'rgba(255,255,255,0.55)', borderRadius: size*0.04 }} />
+            <div style={{ background:'rgba(255,255,255,0.92)', borderRadius: size*0.04 }} />
+          </div>
+        </AppIconShell>
+      ),
+      finder: (size) => (
+        <AppIconShell size={size} bg="linear-gradient(180deg, #7DC4FF 0%, #1A8FFF 100%)">
+          <svg viewBox="0 0 100 100" width="100%" height="100%" style={{ position:'absolute', inset:0 }}>
+            <ellipse cx="38" cy="42" rx="6" ry="11" fill="white" />
+            <ellipse cx="62" cy="42" rx="6" ry="11" fill="white" />
+            <ellipse cx="38" cy="44" rx="2.4" ry="4" fill="#222" />
+            <ellipse cx="62" cy="44" rx="2.4" ry="4" fill="#222" />
+            <path d="M 32 64 Q 50 78 68 64" stroke="white" strokeWidth="4" fill="none" strokeLinecap="round" />
+          </svg>
+        </AppIconShell>
+      ),
+      siri: (size) => (
+        <AppIconShell size={size} bg="linear-gradient(135deg, #FF8E5C 0%, #FF4A1F 100%)">
+          <svg viewBox="0 0 100 100" width="100%" height="100%" style={{ position:'absolute', inset:0 }}>
+            <g transform="translate(50 50)">
+              {[0,45,90,135].map(a => (
+                <rect key={a} x="-3" y="-26" width="6" height="52" rx="3" fill="white" transform={`rotate(${a})`} />
+              ))}
+              <circle r="5" fill="white" />
+            </g>
+          </svg>
+        </AppIconShell>
+      ),
+      safari: (size) => (
+        <AppIconShell size={size} bg="linear-gradient(180deg, #19AEFA 0%, #1574E5 100%)">
+          <svg viewBox="0 0 100 100" width="100%" height="100%" style={{ position:'absolute', inset:0 }}>
+            <circle cx="50" cy="50" r="34" fill="white" />
+            <circle cx="50" cy="50" r="29" fill="#E5F1FB" />
+            <path d="M 50 24 L 54 48 L 50 50 Z" fill="#888" />
+            <path d="M 50 76 L 46 52 L 50 50 Z" fill="#888" />
+            <path d="M 50 24 L 46 48 L 50 50 Z" fill="#E5413B" />
+            <path d="M 50 76 L 54 52 L 50 50 Z" fill="#E5413B" />
+          </svg>
+        </AppIconShell>
+      ),
+      music: (size) => (
+        <AppIconShell size={size} bg="linear-gradient(180deg, #FF6B7E 0%, #E62D4A 100%)">
+          <svg viewBox="0 0 100 100" width="100%" height="100%" style={{ position:'absolute', inset:0 }}>
+            <path d="M 38 22 L 38 60 Q 38 70 30 70 Q 22 70 22 62 Q 22 54 30 54 Q 33 54 35 56 L 35 32 L 70 24 L 70 56 Q 70 66 62 66 Q 54 66 54 58 Q 54 50 62 50 Q 65 50 67 52 L 67 28 L 38 36 Z" fill="white" />
+          </svg>
+        </AppIconShell>
+      ),
+      messages: (size) => (
+        <AppIconShell size={size} bg="linear-gradient(180deg, #5BE36B 0%, #2BC44A 100%)">
+          <svg viewBox="0 0 100 100" width="100%" height="100%" style={{ position:'absolute', inset:0 }}>
+            <path d="M 50 20 C 70 20 84 31 84 47 C 84 63 70 74 50 74 C 47 74 44 73.7 41 73.2 L 26 80 L 30 67 C 22 62 16 55 16 47 C 16 31 30 20 50 20 Z" fill="white" />
+          </svg>
+        </AppIconShell>
+      ),
+      discord: (size) => (
+        <AppIconShell size={size} bg="#5865F2">
+          <svg viewBox="0 0 100 100" width="100%" height="100%" style={{ position:'absolute', inset:0 }}>
+            <path fill="white" d="M 71 30 C 65 27 59 25 53 25 L 52 27 C 58 28 63 30 67 33 C 56 27 43 27 31 33 C 35 30 40 28 46 27 L 45 25 C 39 25 33 27 27 30 C 19 42 17 54 18 65 C 25 70 32 73 39 73 L 41 70 C 38 69 35 68 33 66 C 39 70 47 72 50 72 C 53 72 61 70 67 66 C 65 68 62 69 59 70 L 61 73 C 68 73 75 70 82 65 C 83 53 81 41 71 30 Z M 38 60 C 35 60 33 57 33 54 C 33 51 35 48 38 48 C 41 48 43 51 43 54 C 43 57 41 60 38 60 Z M 62 60 C 59 60 57 57 57 54 C 57 51 59 48 62 48 C 65 48 67 51 67 54 C 67 57 65 60 62 60 Z" />
+          </svg>
+        </AppIconShell>
+      ),
+      telegram: (size) => (
+        <AppIconShell size={size} bg="linear-gradient(180deg, #3FA3E8 0%, #1A7CC9 100%)">
+          <svg viewBox="0 0 100 100" width="100%" height="100%" style={{ position:'absolute', inset:0 }}>
+            <path d="M 78 24 L 18 50 L 40 57 L 50 78 L 62 60 L 78 24 Z" fill="white" />
+            <path d="M 40 57 L 78 24 L 50 64 Z" fill="rgba(0,0,0,0.12)" />
+            <path d="M 40 57 L 50 78 L 50 64 Z" fill="rgba(0,0,0,0.06)" />
+          </svg>
+        </AppIconShell>
+      ),
+    };
 
-  function updateLinks() {
-    const room = roomInput.value.trim().toUpperCase();
-    const base  = window.location.origin;
-    openMac.href   = room ? `${base}/app-desktop.html?room=${room}` : '#';
-    openPhone.href = room ? `${base}/app-mobile.html?room=${room}` : '#';
-    openMac.style.opacity   = room ? '1' : '0.4';
-    openPhone.style.opacity = room ? '1' : '0.4';
-  }
+    function TIcon({ id, size = 80 }) {
+      const fn = ICONS[id];
+      if (!fn) return null;
+      return fn(size);
+    }
 
-  roomInput.addEventListener('input', updateLinks);
-  updateLinks();
+    // ─── PAIR CHIP ───────────────────────────────────────────────────────
+    function PairChip({ scale = 1, dark = false }) {
+      const cellSize = Math.round(52 * scale);
+      const fontSize = Math.round(24 * scale);
+      const gap      = Math.round(8 * scale);
+      const pad      = Math.round(20 * scale);
+      const br       = Math.round(16 * scale);
+      return (
+        <div style={{
+          display: 'inline-flex', flexDirection: 'column',
+          alignItems: 'center', gap: Math.round(12 * scale),
+          background: dark ? 'rgba(0,0,0,0.35)' : 'rgba(255,255,255,0.9)',
+          borderRadius: br, padding: pad,
+          border: dark ? '0.5px solid rgba(255,255,255,0.12)' : '0.5px solid rgba(0,0,0,0.08)',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.14)',
+        }}>
+          <div style={{ display:'flex', alignItems:'center', gap: Math.round(6*scale) }}>
+            <div style={{
+              width: Math.round(7*scale), height: Math.round(7*scale), borderRadius: '50%',
+              background: SUCCESS, animation: 'ft-pulse-green 1.6s ease-out infinite',
+            }} />
+            <span style={{
+              fontFamily: FONT_MONO, fontSize: Math.round(10*scale), fontWeight: 600,
+              color: dark ? '#fff' : TEXT_BLACK, letterSpacing: 0.5,
+            }}>Connecte · iPhone</span>
+          </div>
+          <div style={{ display:'flex', gap }}>
+            {PAIR.map((c, i) => (
+              <div key={i} style={{
+                width: cellSize, height: cellSize, borderRadius: Math.round(8*scale),
+                background: dark ? 'rgba(255,255,255,0.12)' : '#fff',
+                border: dark ? '0.5px solid rgba(255,255,255,0.2)' : '0.5px solid rgba(0,0,0,0.1)',
+                display:'flex', alignItems:'center', justifyContent:'center',
+                fontFamily: FONT_MONO, fontSize, fontWeight: 700,
+                color: dark ? '#fff' : TEXT_BLACK,
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              }}>{c}</div>
+            ))}
+          </div>
+          <div style={{
+            fontFamily: FONT_MONO, fontSize: Math.round(9*scale), fontWeight: 500,
+            color: dark ? 'rgba(255,255,255,0.5)' : 'rgba(26,22,17,0.5)',
+            letterSpacing: 0.3,
+          }}>Tapez ce code sur le telephone</div>
+        </div>
+      );
+    }
 
-  const urlRoom = new URLSearchParams(location.search).get('room');
-  if (urlRoom) {
-    roomInput.value = urlRoom.toUpperCase();
-    updateLinks();
-  }
-</script>
+    // ─── MAC LAPTOP MOCKUP ───────────────────────────────────────────────
+    function MacLaptopMockup({ width = 460, withPopover = true }) {
+      const h          = width * 0.6;
+      const screenH    = h - 14;
+      const lidPad     = width * 0.02;
+      const screenBr   = Math.round(width * 0.013);
+
+      return (
+        <div style={{ width, display:'flex', flexDirection:'column', alignItems:'center' }}>
+          {/* LID */}
+          <div style={{
+            width, height: h, position:'relative',
+            background: 'linear-gradient(180deg, #1c1c1e 0%, #0e0e10 100%)',
+            borderRadius: `${Math.round(width*0.03)}px ${Math.round(width*0.03)}px ${Math.round(width*0.01)}px ${Math.round(width*0.01)}px`,
+            padding: lidPad,
+            boxShadow: '0 2px 0 rgba(0,0,0,0.5)',
+          }}>
+            {/* camera notch */}
+            <div style={{
+              position:'absolute', top: 4, left:'50%', transform:'translateX(-50%)',
+              width: Math.round(width*0.11), height: 5,
+              background: '#111', borderRadius: 3,
+            }} />
+            {/* screen */}
+            <div style={{
+              width: '100%', height: '100%',
+              background: MAC_WP,
+              borderRadius: screenBr,
+              overflow:'hidden', position:'relative',
+            }}>
+              {/* menubar */}
+              <div style={{
+                height: Math.round(h * 0.042),
+                background: 'rgba(255,255,255,0.28)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                display:'flex', alignItems:'center',
+                padding: `0 ${Math.round(width*0.022)}px`,
+                gap: Math.round(width*0.022),
+                borderBottom: '0.5px solid rgba(255,255,255,0.3)',
+                fontSize: Math.round(h*0.028),
+                color: 'rgba(0,0,0,0.8)',
+                fontFamily: '-apple-system, SF Pro Display, sans-serif',
+              }}>
+                <span style={{ fontWeight:700, fontSize: Math.round(h*0.028) }}>FindInTosh</span>
+                {['Fichier','Edition','Affichage'].map(m => (
+                  <span key={m} style={{ opacity:0.75 }}>{m}</span>
+                ))}
+                <div style={{ flex:1 }} />
+                <span style={{ fontWeight:600 }}>{Math.round(h*0.028) > 10 ? '16:32' : '16:32'}</span>
+              </div>
+
+              {/* popover (top-right corner of screen) */}
+              {withPopover && (
+                <div style={{
+                  position:'absolute', top: Math.round(h*0.06), right: Math.round(width*0.025),
+                  background: 'rgba(255,255,255,0.88)',
+                  backdropFilter: 'blur(30px)',
+                  WebkitBackdropFilter: 'blur(30px)',
+                  borderRadius: Math.round(width*0.025),
+                  padding: Math.round(width*0.022),
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.18), 0 0 0 0.5px rgba(0,0,0,0.08)',
+                  minWidth: Math.round(width*0.38),
+                  zIndex:5,
+                }}>
+                  {/* header */}
+                  <div style={{ display:'flex', alignItems:'center', gap: Math.round(width*0.014), marginBottom: Math.round(width*0.016) }}>
+                    <div style={{
+                      width: Math.round(width*0.022), height: Math.round(width*0.022),
+                      borderRadius:'50%', background: SUCCESS,
+                      animation:'ft-pulse-green 1.6s ease-out infinite', flexShrink:0,
+                    }} />
+                    <span style={{ fontSize: Math.round(h*0.032), fontWeight:600, color:TEXT_BLACK }}>
+                      Connecte · iPhone
+                    </span>
+                  </div>
+                  {/* code cells */}
+                  <div style={{ display:'flex', gap: Math.round(width*0.008) }}>
+                    {PAIR.map((c,i) => (
+                      <div key={i} style={{
+                        width: Math.round(width*0.056), height: Math.round(width*0.056),
+                        borderRadius: Math.round(width*0.012),
+                        background: '#fff',
+                        border: '0.5px solid rgba(0,0,0,0.1)',
+                        display:'flex', alignItems:'center', justifyContent:'center',
+                        fontFamily: FONT_MONO,
+                        fontSize: Math.round(h*0.046), fontWeight:700,
+                        color: TEXT_BLACK,
+                      }}>{c}</div>
+                    ))}
+                  </div>
+                  <div style={{
+                    marginTop: Math.round(width*0.012),
+                    fontFamily: FONT_MONO,
+                    fontSize: Math.round(h*0.023),
+                    color:'rgba(26,22,17,0.5)',
+                  }}>Tapez ce code sur le telephone</div>
+                </div>
+              )}
+
+              {/* dock */}
+              <div style={{
+                position:'absolute', bottom: Math.round(h*0.05), left:'50%',
+                transform:'translateX(-50%)',
+                display:'flex', gap: Math.round(width*0.012),
+                padding: `${Math.round(width*0.01)}px ${Math.round(width*0.018)}px`,
+                background: 'rgba(255,255,255,0.45)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                borderRadius: Math.round(width*0.036),
+                border: '0.5px solid rgba(255,255,255,0.6)',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+              }}>
+                {['finder','safari','music','messages','discord','telegram'].map(id => (
+                  <TIcon key={id} id={id} size={Math.round(width*0.066)} />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* HINGE */}
+          <div style={{
+            width: width * 0.98, height: 4,
+            background: 'linear-gradient(180deg, #3a3a3c 0%, #1c1c1e 100%)',
+          }} />
+
+          {/* BASE */}
+          <div style={{
+            width: width * 1.05, height: Math.round(width * 0.028),
+            background: 'linear-gradient(180deg, #c8c8cc 0%, #a8a8b0 50%, #8a8a92 100%)',
+            borderRadius: `0 0 ${Math.round(width*0.024)}px ${Math.round(width*0.024)}px`,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.22)',
+          }} />
+        </div>
+      );
+    }
+
+    // ─── L1 TAHOE GRID ───────────────────────────────────────────────────
+    const TAHOE_APPS = ['launchpad','finder','siri','safari','music','messages','discord','telegram'];
+
+    function L1TahoeGrid() {
+      return (
+        <div style={{
+          position:'absolute', inset:0,
+          display:'flex', alignItems:'stretch',
+          padding: '40px 20px 36px 60px',
+          gap: 16,
+        }}>
+          {/* 2x4 grid */}
+          <div style={{
+            display:'grid', gridTemplateColumns:'1fr 1fr',
+            gridTemplateRows:'repeat(4, 1fr)',
+            gap: 14, flex:1,
+          }}>
+            {TAHOE_APPS.map(id => (
+              <div key={id} style={{
+                display:'flex', alignItems:'center', gap: 10,
+              }}>
+                <TIcon id={id} size={52} />
+                <div style={{
+                  fontFamily:'-apple-system, SF Pro Display, sans-serif',
+                  fontSize:13, fontWeight:500, color:'#fff', opacity:0.9,
+                }}>{id.charAt(0).toUpperCase()+id.slice(1)}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* right rail */}
+          <div style={{
+            width: 56, display:'flex', flexDirection:'column',
+            alignItems:'center', gap: 10, justifyContent:'center',
+          }}>
+            {/* mode pill */}
+            <div style={{
+              background:'rgba(255,255,255,0.14)',
+              borderRadius:12, padding:'6px 8px',
+              fontSize:9, color:'rgba(255,255,255,0.7)',
+              fontFamily:FONT_MONO, letterSpacing:0.5,
+              writingMode:'vertical-rl',
+              textOrientation:'mixed',
+            }}>MODE</div>
+            {/* page dots */}
+            <div style={{ display:'flex', flexDirection:'column', gap:6, marginTop:8 }}>
+              {[true,false,false].map((a,i) => (
+                <div key={i} style={{
+                  width: a ? 18 : 6, height: 6, borderRadius:3,
+                  background: a ? ORANGE : 'rgba(255,255,255,0.3)',
+                  transition:'all .2s',
+                }} />
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ─── HERO PHONE ──────────────────────────────────────────────────────
+    function HeroPhone({ scale = 0.72 }) {
+      const W = Math.round(844 * scale);
+      const H = Math.round(390 * scale);
+      const bezel = Math.round(14 * scale);
+      const caseR  = Math.round(60 * scale);
+
+      return (
+        <div style={{
+          width: W, height: H, borderRadius: caseR,
+          background: 'linear-gradient(135deg, #D98A5A 0%, #C97A4F 50%, #B86940 100%)',
+          boxShadow: '0 30px 80px rgba(0,0,0,0.45), 0 0 0 1px rgba(0,0,0,0.18) inset',
+          position:'relative',
+          flexShrink:0,
+        }}>
+          {/* power button hint */}
+          <div style={{
+            position:'absolute', left:-2, top:'40%',
+            width:4, height: Math.round(76*scale),
+            borderRadius:2, background:'rgba(0,0,0,0.35)',
+          }} />
+          {/* screen */}
+          <div style={{
+            position:'absolute', inset:bezel, borderRadius: Math.round(48*scale),
+            background:'radial-gradient(120% 100% at 30% 50%, #2a2a35 0%, #0a0a0c 60%)',
+            overflow:'hidden',
+            boxShadow:'inset 0 0 0 1px rgba(0,0,0,0.4), inset 0 0 6px rgba(0,0,0,0.5)',
+          }}>
+            {/* dynamic island */}
+            <div style={{
+              position:'absolute', left: Math.round(10*scale), top:'50%',
+              transform:'translateY(-50%)',
+              width: Math.round(28*scale), height: Math.round(110*scale),
+              borderRadius: Math.round(16*scale),
+              background:'#000', zIndex:50,
+            }} />
+            {/* content */}
+            <L1TahoeGrid />
+            {/* home indicator */}
+            <div style={{
+              position:'absolute', bottom: Math.round(7*scale), left:'50%',
+              transform:'translateX(-50%)',
+              width: Math.round(134*scale), height: Math.round(5*scale),
+              borderRadius:100, background:'rgba(255,255,255,0.7)',
+              zIndex:60,
+            }} />
+          </div>
+        </div>
+      );
+    }
+
+    // ─── NAV ─────────────────────────────────────────────────────────────
+    function Nav() {
+      return (
+        <nav style={{
+          position:'absolute', top:0, left:0, right:0, zIndex:10,
+          padding:'22px 44px',
+          display:'flex', alignItems:'center', justifyContent:'space-between',
+        }}>
+          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+            <FitLogo size={28} />
+            <span style={{ fontSize:15, fontWeight:700, color:TEXT_BLACK, letterSpacing:-0.3 }}>
+              FindInTosh
+            </span>
+          </div>
+          <div style={{ display:'flex', alignItems:'center', gap:24 }}>
+            {['Fonctionnalites','Comment ca marche','Tarifs','Journal'].map(l => (
+              <a key={l} href="#" style={{
+                fontSize:13, color:`rgba(26,22,17,0.7)`,
+                textDecoration:'none',
+              }}>{l}</a>
+            ))}
+            <a href="#install" style={{
+              display:'inline-flex', alignItems:'center',
+              padding:'8px 18px', borderRadius:100,
+              background:'#1a1611', color:'#fff',
+              fontSize:13, fontWeight:600,
+              textDecoration:'none',
+              boxShadow:'0 2px 8px rgba(0,0,0,0.25)',
+            }}>Telecharger</a>
+          </div>
+        </nav>
+      );
+    }
+
+    // ─── SECTION 1: HERO ─────────────────────────────────────────────────
+    function HeroSection() {
+      return (
+        <section style={{
+          position:'relative', height:'100vh', minHeight:700,
+          background:'#0c1d36', overflow:'hidden',
+        }}>
+          {/* diagonal BG halves */}
+          <div style={{
+            position:'absolute', inset:0,
+            clipPath:'polygon(0 0, 100% 0, 35% 100%, 0 100%)',
+            background: MAC_WP,
+          }} />
+          <div style={{
+            position:'absolute', inset:0,
+            clipPath:'polygon(100% 0, 100% 100%, 35% 100%)',
+            background: WIN_WP,
+          }} />
+
+          <Nav />
+
+          {/* MAC SIDE */}
+          <div style={{
+            position:'absolute', top:110, left:64,
+            maxWidth:360, zIndex:5,
+          }}>
+            <div style={{
+              fontSize:11, fontWeight:700, letterSpacing:2,
+              color:ORANGE, textTransform:'uppercase',
+              marginBottom:14,
+            }}>Pour macOS Sequoia · Tahoe</div>
+            <h1 style={{
+              fontSize:68, fontWeight:700, letterSpacing:-2.6,
+              lineHeight:0.98, color:TEXT_BLACK,
+              margin:0,
+            }}>
+              Votre<br />
+              Mac, sur<br />
+              le cote.
+            </h1>
+            <p style={{
+              fontSize:14, color:`rgba(26,22,17,0.72)`,
+              maxWidth:290, marginTop:22, lineHeight:1.55,
+            }}>
+              Epinglez vos apps preferees. Surveillez tout d'un coup d'oeil. Lancez sur le Mac d'un tap.
+            </p>
+
+            {/* laptop below copy */}
+            <div style={{ marginTop:36 }}>
+              <MacLaptopMockup width={420} withPopover={true} />
+            </div>
+          </div>
+
+          {/* CENTER PHONE */}
+          <div style={{
+            position:'absolute', top:'50%', left:'50%',
+            transform:'translate(-50%, -50%) rotate(-3deg)',
+            zIndex:6,
+            animation:'float-phone 4s ease-in-out infinite',
+          }}>
+            <HeroPhone scale={0.72} />
+            {/* caption badge */}
+            <div style={{
+              marginTop:14,
+              background:'rgba(10,10,15,0.72)',
+              backdropFilter:'blur(20px)',
+              WebkitBackdropFilter:'blur(20px)',
+              borderRadius:100,
+              padding:'6px 16px',
+              display:'inline-flex',
+              fontFamily:FONT_MONO,
+              fontSize:11, color:'rgba(255,255,255,0.8)',
+              border:'0.5px solid rgba(255,255,255,0.12)',
+              whiteSpace:'nowrap',
+            }}>
+              iPhone · iPad · Android — wifi local, jamais le cloud
+            </div>
+          </div>
+
+          {/* WIN SIDE */}
+          <div style={{
+            position:'absolute', right:64, bottom:140,
+            textAlign:'right', zIndex:5, color:'#fff',
+          }}>
+            <h2 style={{
+              fontSize:68, fontWeight:700, letterSpacing:-2.6,
+              lineHeight:0.98, margin:0, color:'#fff',
+            }}>
+              Ou votre<br />
+              PC. Pareil.
+            </h2>
+            <div style={{
+              fontSize:11, fontWeight:700, letterSpacing:2,
+              color:'rgba(255,255,255,0.7)', textTransform:'uppercase',
+              marginTop:18,
+            }}>Pour Windows 11 · 10</div>
+            <p style={{
+              fontSize:14, color:'rgba(255,255,255,0.78)',
+              marginTop:8, lineHeight:1.55, maxWidth:300,
+              marginLeft:'auto',
+            }}>
+              Meme app, meme code, meme dock. Changez de bureau sans reappairer.
+            </p>
+          </div>
+
+          {/* BOTTOM CTAs */}
+          <div style={{
+            position:'absolute', bottom:36, left:'50%',
+            transform:'translateX(-50%)',
+            display:'flex', gap:12, zIndex:8,
+          }}>
+            <a href="#install" style={{
+              display:'inline-flex', alignItems:'center', gap:10,
+              padding:'12px 24px', borderRadius:14,
+              background:'#1a1611', color:'#fff',
+              textDecoration:'none', fontSize:14, fontWeight:600,
+              boxShadow:'0 8px 24px rgba(0,0,0,0.4)',
+            }}>
+              <svg width="16" height="18" viewBox="0 0 13 16" fill="white">
+                <path d="M10.6 7.8 C 10.6 5.9 12.2 5 12.2 5 C 11.4 3.8 10.1 3.7 9.6 3.7 C 8.5 3.6 7.4 4.4 6.9 4.4 C 6.3 4.4 5.4 3.7 4.4 3.7 C 3.1 3.7 1.9 4.5 1.2 5.8 C -0.1 8.3 0.9 12 2.2 14 C 2.8 15 3.6 16 4.6 16 C 5.5 15.9 5.9 15.4 7 15.4 C 8.1 15.4 8.4 16 9.4 16 C 10.5 16 11.2 15 11.8 14 C 12.5 12.9 12.8 11.9 12.8 11.8 C 12.8 11.8 10.6 11 10.6 7.8 Z M 8.7 2.6 C 9.2 2 9.6 1.1 9.4 0.2 C 8.7 0.2 7.7 0.7 7.2 1.3 C 6.7 1.8 6.3 2.7 6.4 3.5 C 7.2 3.6 8.1 3.1 8.7 2.6 Z" />
+              </svg>
+              Mac (.dmg)
+            </a>
+            <a href="#" style={{
+              display:'inline-flex', alignItems:'center', gap:10,
+              padding:'12px 24px', borderRadius:14,
+              background:'#fff', color:TEXT_BLACK,
+              textDecoration:'none', fontSize:14, fontWeight:600,
+              boxShadow:'0 8px 24px rgba(0,0,0,0.3)',
+            }}>
+              <svg width="16" height="16" viewBox="0 0 16 16">
+                <rect x="0" y="0" width="7" height="7" fill="#0067B8" />
+                <rect x="9" y="0" width="7" height="7" fill="#0067B8" />
+                <rect x="0" y="9" width="7" height="7" fill="#0067B8" />
+                <rect x="9" y="9" width="7" height="7" fill="#0067B8" />
+              </svg>
+              Windows (.exe)
+            </a>
+          </div>
+        </section>
+      );
+    }
+
+    // ─── SECTION 2: HOW IT WORKS ─────────────────────────────────────────
+    function HowSection() {
+      return (
+        <section id="how" style={{ background:CREAM, padding:'80px 80px 72px' }}>
+          {/* eyebrow */}
+          <div style={{ display:'flex', alignItems:'center', gap:14, marginBottom:32 }}>
+            <span style={{ fontFamily:FONT_MONO, fontSize:13, color:ORANGE, fontWeight:700 }}>§ 02</span>
+            <div style={{ width:24, height:1, background:'rgba(26,22,17,0.25)' }} />
+            <span style={{ fontSize:11, fontWeight:700, letterSpacing:2, color:'rgba(26,22,17,0.5)', textTransform:'uppercase' }}>
+              Comment
+            </span>
+          </div>
+
+          <h2 style={{
+            fontSize:56, fontWeight:700, letterSpacing:-2,
+            color:TEXT_BLACK, marginBottom:56, lineHeight:1.05,
+          }}>
+            Trois etapes.{' '}
+            <em style={{ color:ORANGE, fontStyle:'italic', fontFamily:'Georgia, "Times New Roman", serif' }}>
+              Pas une de plus.
+            </em>
+          </h2>
+
+          {/* 3-column grid */}
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:28 }}>
+
+            {/* COL 1 — Installer */}
+            <div>
+              <div style={{ fontFamily:FONT_MONO, fontSize:12, color:'rgba(26,22,17,0.4)', marginBottom:10 }}>01</div>
+              <div style={{ fontSize:22, fontWeight:700, color:TEXT_BLACK, marginBottom:6 }}>Installer</div>
+              <div style={{ fontSize:14, color:'rgba(26,22,17,0.65)', marginBottom:20, lineHeight:1.5 }}>
+                L'app pese 8 Mo. Apple Silicon natif.
+              </div>
+              <div style={{
+                background:'#fff', borderRadius:16,
+                boxShadow:'0 2px 12px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06)',
+                height:200, padding:24,
+                display:'flex', alignItems:'center', justifyContent:'center',
+                overflow:'hidden',
+              }}>
+                <div style={{ transform:'scale(0.55)', transformOrigin:'center center' }}>
+                  <MacLaptopMockup width={460} withPopover={false} />
+                </div>
+              </div>
+            </div>
+
+            {/* COL 2 — Pairer */}
+            <div>
+              <div style={{ fontFamily:FONT_MONO, fontSize:12, color:'rgba(26,22,17,0.4)', marginBottom:10 }}>02</div>
+              <div style={{ fontSize:22, fontWeight:700, color:TEXT_BLACK, marginBottom:6 }}>Pairer</div>
+              <div style={{ fontSize:14, color:'rgba(26,22,17,0.65)', marginBottom:20, lineHeight:1.5 }}>
+                Un code a 6 caracteres apparait dans le menubar.
+              </div>
+              <div style={{
+                background:'#fff', borderRadius:16,
+                boxShadow:'0 2px 12px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06)',
+                height:200, padding:24,
+                display:'flex', alignItems:'center', justifyContent:'center',
+              }}>
+                <PairChip scale={0.78} />
+              </div>
+            </div>
+
+            {/* COL 3 — Profiter */}
+            <div>
+              <div style={{ fontFamily:FONT_MONO, fontSize:12, color:'rgba(26,22,17,0.4)', marginBottom:10 }}>03</div>
+              <div style={{ fontSize:22, fontWeight:700, color:TEXT_BLACK, marginBottom:6 }}>Profiter</div>
+              <div style={{ fontSize:14, color:'rgba(26,22,17,0.65)', marginBottom:20, lineHeight:1.5 }}>
+                Le dock apparait. Tap pour lancer.
+              </div>
+              <div style={{
+                background:'#fff', borderRadius:16,
+                boxShadow:'0 2px 12px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06)',
+                height:200,
+                display:'flex', alignItems:'center', justifyContent:'center',
+                overflow:'hidden',
+              }}>
+                <div style={{
+                  transform:'scale(0.195)',
+                  transformOrigin:'center center',
+                  flexShrink:0,
+                }}>
+                  <HeroPhone scale={0.72} />
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </section>
+      );
+    }
+
+    // ─── SECTION 3: INSTALL ──────────────────────────────────────────────
+    const INSTALL_CMD = 'curl -fsSL https://findintosh-production.up.railway.app/install.sh -o /tmp/ft.sh && bash /tmp/ft.sh';
+
+    function InstallSection() {
+      const [copied, setCopied] = useState(false);
+
+      function copyInstall() {
+        navigator.clipboard.writeText(INSTALL_CMD).then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        });
+      }
+
+      return (
+        <section id="install" style={{ background:CREAM, padding:'0 80px 80px' }}>
+          {/* eyebrow */}
+          <div style={{ display:'flex', alignItems:'center', gap:14, marginBottom:32 }}>
+            <span style={{ fontFamily:FONT_MONO, fontSize:13, color:ORANGE, fontWeight:700 }}>§ 03</span>
+            <div style={{ width:24, height:1, background:'rgba(26,22,17,0.25)' }} />
+            <span style={{ fontSize:11, fontWeight:700, letterSpacing:2, color:'rgba(26,22,17,0.5)', textTransform:'uppercase' }}>
+              Installer
+            </span>
+          </div>
+
+          <h2 style={{
+            fontSize:48, fontWeight:700, letterSpacing:-1.8,
+            color:TEXT_BLACK, marginBottom:36, lineHeight:1.1,
+          }}>
+            Une commande. C'est tout.
+          </h2>
+
+          <div style={{
+            background:'#fff', borderRadius:16,
+            boxShadow:'0 2px 12px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06)',
+            padding:24, maxWidth:860,
+          }}>
+            <div style={{
+              fontSize:12, fontWeight:600, color:'rgba(26,22,17,0.55)',
+              marginBottom:12, letterSpacing:0.3,
+            }}>Terminal sur votre Mac :</div>
+
+            <div style={{
+              display:'flex', alignItems:'center', gap:12,
+              background:'#f6f4f1', borderRadius:10,
+              padding:'14px 18px',
+            }}>
+              <code style={{
+                fontFamily:FONT_MONO, fontSize:12.5, color:TEXT_BLACK,
+                flex:1, wordBreak:'break-all', lineHeight:1.5,
+              }}>{INSTALL_CMD}</code>
+              <button
+                onClick={copyInstall}
+                style={{
+                  flexShrink:0,
+                  padding:'8px 18px', borderRadius:8, border:'none',
+                  background: copied ? SUCCESS : ORANGE,
+                  color:'#fff', fontSize:13, fontWeight:600,
+                  cursor:'pointer', transition:'background .2s',
+                  whiteSpace:'nowrap',
+                }}
+              >{copied ? 'Copie !' : 'Copier'}</button>
+            </div>
+
+            <div style={{
+              marginTop:14, fontSize:12.5,
+              color:'rgba(26,22,17,0.5)', letterSpacing:0.2,
+            }}>
+              Gratuit · Apple Silicon natif · Node.js integre · macOS 12+
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    // ─── SECTION 4: DEJA INSTALLE ────────────────────────────────────────
+    function AlreadySection() {
+      const [room, setRoom] = useState('');
+
+      useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const r = params.get('room');
+        if (r) setRoom(r.toUpperCase().slice(0,6));
+      }, []);
+
+      const base = window.location.origin;
+
+      function openMac() {
+        if (room) window.open(base + '/app-desktop.html?room=' + room, '_blank');
+      }
+      function openPhone() {
+        if (room) window.open(base + '/app-mobile.html?room=' + room, '_blank');
+      }
+
+      return (
+        <section id="already" style={{ background:CREAM, padding:'0 80px 100px', textAlign:'center' }}>
+          <div style={{
+            maxWidth:520, margin:'0 auto',
+            background:'#fff', borderRadius:20,
+            boxShadow:'0 2px 12px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06)',
+            padding:'48px 40px',
+          }}>
+            <h2 style={{
+              fontSize:36, fontWeight:700, letterSpacing:-1.4,
+              color:TEXT_BLACK, marginBottom:10,
+            }}>Deja installe ?</h2>
+            <p style={{
+              fontSize:14, color:'rgba(26,22,17,0.65)',
+              lineHeight:1.6, marginBottom:32,
+            }}>
+              Entrez votre Room ID (visible dans l'app Mac) pour ouvrir directement.
+            </p>
+
+            <input
+              type="text"
+              value={room}
+              onChange={e => setRoom(e.target.value.toUpperCase().slice(0,6))}
+              placeholder="EX: 7FK93A"
+              maxLength={6}
+              style={{
+                display:'block', width:'100%',
+                padding:'16px 20px',
+                fontSize:28, fontWeight:700,
+                fontFamily:FONT_MONO,
+                letterSpacing:8, textAlign:'center',
+                color:TEXT_BLACK,
+                background:'#f6f4f1',
+                border:`2px solid ${room.length === 6 ? ORANGE : 'rgba(26,22,17,0.15)'}`,
+                borderRadius:12, outline:'none',
+                marginBottom:20,
+                transition:'border-color .2s',
+              }}
+            />
+
+            <div style={{ display:'flex', gap:12, justifyContent:'center' }}>
+              <button
+                onClick={openMac}
+                disabled={room.length < 1}
+                style={{
+                  flex:1, padding:'13px 0', borderRadius:12, border:'none',
+                  background: room.length > 0 ? '#1a1611' : 'rgba(26,22,17,0.15)',
+                  color: room.length > 0 ? '#fff' : 'rgba(26,22,17,0.4)',
+                  fontSize:14, fontWeight:600, cursor: room.length > 0 ? 'pointer' : 'default',
+                  transition:'all .2s',
+                }}
+              >
+                Ouvrir sur Mac
+              </button>
+              <button
+                onClick={openPhone}
+                disabled={room.length < 1}
+                style={{
+                  flex:1, padding:'13px 0', borderRadius:12, border:'none',
+                  background: room.length > 0 ? ORANGE : 'rgba(26,22,17,0.15)',
+                  color: room.length > 0 ? '#fff' : 'rgba(26,22,17,0.4)',
+                  fontSize:14, fontWeight:600, cursor: room.length > 0 ? 'pointer' : 'default',
+                  transition:'all .2s',
+                }}
+              >
+                Ouvrir sur iPhone
+              </button>
+            </div>
+
+            {room.length > 0 && room.length < 6 && (
+              <div style={{
+                marginTop:14, fontSize:12,
+                color:'rgba(26,22,17,0.45)', fontFamily:FONT_MONO,
+              }}>
+                {6 - room.length} caractere{6-room.length>1?'s':''} restant{6-room.length>1?'s':''}…
+              </div>
+            )}
+          </div>
+        </section>
+      );
+    }
+
+    // ─── FOOTER ──────────────────────────────────────────────────────────
+    function Footer() {
+      return (
+        <footer style={{
+          background:CREAM,
+          borderTop:'1px solid rgba(26,22,17,0.1)',
+          padding:'24px 80px',
+          display:'flex', alignItems:'center', justifyContent:'center', gap:16,
+        }}>
+          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+            <FitLogo size={18} />
+            <span style={{ fontSize:13, color:`rgba(26,22,17,0.4)`, fontWeight:500 }}>
+              FindInTosh · Beta gratuite · open source
+            </span>
+          </div>
+        </footer>
+      );
+    }
+
+    // ─── APP ROOT ────────────────────────────────────────────────────────
+    function App() {
+      return (
+        <>
+          <HeroSection />
+          <HowSection />
+          <InstallSection />
+          <AlreadySection />
+          <Footer />
+        </>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
 </body>
 </html>
