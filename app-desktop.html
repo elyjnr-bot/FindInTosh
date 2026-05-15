@@ -131,14 +131,14 @@ function useDesktopWS({ onInit, onPhoneConnected, onPhoneDisconnected, onLaunchi
   const [wsState, setWsState] = React.useState('disconnected');
 
   React.useEffect(() => {
-    const host  = window.location.hostname || 'localhost';
-    const port  = window.location.port || '7342';
-    const room  = new URLSearchParams(window.location.search).get('room') || '';
-    const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const query = room ? `?room=${room}` : '';
+    const room     = new URLSearchParams(window.location.search).get('room') || '';
+    const proto    = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const portStr  = window.location.port ? `:${window.location.port}` : '';
+    const origin   = `${window.location.hostname}${portStr}`;
+    const query    = room ? `?room=${room}` : '';
 
     const connect = () => {
-      const ws = new WebSocket(`${proto}://${host}:${port}${query}`);
+      const ws = new WebSocket(`${proto}://${origin}${query}`);
       wsRef.current = ws;
       ws.onopen = () => {
         setWsState('connected');
