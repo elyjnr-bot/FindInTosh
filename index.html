@@ -502,9 +502,9 @@
             <a href="#install" style={{
               display:'inline-flex', alignItems:'center',
               padding:'8px 16px', borderRadius:100,
-              background:'rgba(255,255,255,0.18)', color:'#fff',
+              background:'#1a1611', color:'#fff',
               fontSize:13, fontWeight:600, textDecoration:'none',
-              border:'1px solid rgba(255,255,255,0.3)',
+              boxShadow:'0 2px 8px rgba(0,0,0,0.25)',
             }}>Installer</a>
           ) : (
             <div style={{ display:'flex', alignItems:'center', gap:24 }}>
@@ -533,82 +533,104 @@
       if (isMobile) {
         return (
           <section style={{
-            position:'relative',
-            background: 'linear-gradient(160deg, #1a2b4a 0%, #0c1d36 55%, #1a3b73 100%)',
-            overflow:'hidden',
-            paddingBottom: 48,
+            position:'relative', minHeight:'100vh',
+            background:'#0c1d36', overflow:'hidden',
           }}>
-            {/* soft color blobs */}
-            <div style={{ position:'absolute', inset:0, pointerEvents:'none' }}>
-              <div style={{ position:'absolute', top:-60, left:-40, width:260, height:260, borderRadius:'50%', background:'rgba(196,217,245,0.18)', filter:'blur(60px)' }} />
-              <div style={{ position:'absolute', top:20, right:-60, width:200, height:200, borderRadius:'50%', background:'rgba(240,194,201,0.2)', filter:'blur(50px)' }} />
-            </div>
+            {/* même diagonale que desktop */}
+            <div style={{
+              position:'absolute', inset:0,
+              clipPath:'polygon(0 0, 100% 0, 58% 100%, 0 100%)',
+              background: MAC_WP,
+            }} />
+            <div style={{
+              position:'absolute', inset:0,
+              clipPath:'polygon(100% 0, 100% 100%, 58% 100%)',
+              background: WIN_WP,
+            }} />
 
-            <Nav dark={true} />
+            <Nav />
 
-            {/* Content */}
-            <div style={{ paddingTop:90, paddingLeft:24, paddingRight:24, textAlign:'center' }}>
-              <div style={{ fontSize:11, fontWeight:700, letterSpacing:2, color:ORANGE, textTransform:'uppercase', marginBottom:14 }}>
-                Pour macOS Sequoia · Tahoe
-              </div>
-              <h1 style={{
-                fontSize:46, fontWeight:800, letterSpacing:-2,
-                lineHeight:1, color:'#fff', margin:0,
-              }}>
-                Votre Mac,<br />sur le cote.
-              </h1>
-              <p style={{
-                fontSize:15, color:'rgba(255,255,255,0.72)',
-                marginTop:16, lineHeight:1.6, maxWidth:300, margin:'16px auto 0',
-              }}>
-                Epinglez vos apps. Surveillez tout d'un coup d'oeil. Lancez sur le Mac d'un tap.
-              </p>
+            {/* contenu en flux vertical, même identité visuelle */}
+            <div style={{ position:'relative', zIndex:5, paddingTop:80 }}>
 
-              {/* CTAs */}
-              <div style={{ marginTop:28, display:'flex', gap:12, justifyContent:'center', flexWrap:'wrap' }}>
-                <a href="#install" style={{
-                  display:'inline-flex', alignItems:'center', gap:8,
-                  padding:'13px 28px', borderRadius:14,
-                  background:'#fff', color:TEXT_BLACK,
-                  textDecoration:'none', fontSize:14, fontWeight:700,
-                  boxShadow:'0 8px 24px rgba(0,0,0,0.35)',
+              {/* MAC SIDE — texte */}
+              <div style={{ padding:'20px 24px 0' }}>
+                <div style={{ fontSize:10, fontWeight:700, letterSpacing:2, color:ORANGE, textTransform:'uppercase', marginBottom:12 }}>
+                  Pour macOS Sequoia · Tahoe
+                </div>
+                <h1 style={{
+                  fontSize:40, fontWeight:700, letterSpacing:-1.8,
+                  lineHeight:0.98, color:TEXT_BLACK, margin:0,
                 }}>
-                  <svg width="14" height="16" viewBox="0 0 13 16" fill={TEXT_BLACK}>
-                    <path d="M10.6 7.8 C 10.6 5.9 12.2 5 12.2 5 C 11.4 3.8 10.1 3.7 9.6 3.7 C 8.5 3.6 7.4 4.4 6.9 4.4 C 6.3 4.4 5.4 3.7 4.4 3.7 C 3.1 3.7 1.9 4.5 1.2 5.8 C -0.1 8.3 0.9 12 2.2 14 C 2.8 15 3.6 16 4.6 16 C 5.5 15.9 5.9 15.4 7 15.4 C 8.1 15.4 8.4 16 9.4 16 C 10.5 16 11.2 15 11.8 14 C 12.5 12.9 12.8 11.9 12.8 11.8 C 12.8 11.8 10.6 11 10.6 7.8 Z M 8.7 2.6 C 9.2 2 9.6 1.1 9.4 0.2 C 8.7 0.2 7.7 0.7 7.2 1.3 C 6.7 1.8 6.3 2.7 6.4 3.5 C 7.2 3.6 8.1 3.1 8.7 2.6 Z" />
-                  </svg>
-                  Mac gratuit
-                </a>
-                <a href="#how" style={{
-                  display:'inline-flex', alignItems:'center', gap:8,
-                  padding:'13px 28px', borderRadius:14,
-                  background:'rgba(255,255,255,0.12)', color:'rgba(255,255,255,0.9)',
-                  textDecoration:'none', fontSize:14, fontWeight:600,
-                  border:'1px solid rgba(255,255,255,0.22)',
-                }}>
-                  Comment ca marche
-                </a>
+                  Votre<br />Mac, sur<br />le cote.
+                </h1>
+                <p style={{ fontSize:13, color:`rgba(26,22,17,0.72)`, maxWidth:240, marginTop:16, lineHeight:1.55 }}>
+                  Epinglez vos apps preferees. Surveillez tout d'un coup d'oeil. Lancez sur le Mac d'un tap.
+                </p>
               </div>
 
-              {/* Phone mockup */}
+              {/* PHONE — centré, même animation */}
               <div style={{
-                marginTop:36, display:'flex', flexDirection:'column',
-                alignItems:'center', gap:14,
+                display:'flex', flexDirection:'column', alignItems:'center',
+                margin:'28px 0 16px', gap:12,
               }}>
-                <div style={{ animation:'float-phone 4s ease-in-out infinite', display:'inline-block' }}>
-                  <HeroPhone scale={0.42} />
+                <div style={{ animation:'float-phone-hero 4s ease-in-out infinite', display:'inline-block' }}>
+                  <HeroPhone scale={0.355} />
                 </div>
                 <div style={{
-                  background:'rgba(10,10,15,0.65)',
-                  backdropFilter:'blur(20px)',
-                  WebkitBackdropFilter:'blur(20px)',
-                  borderRadius:100, padding:'6px 16px',
+                  background:'rgba(10,10,15,0.72)',
+                  backdropFilter:'blur(20px)', WebkitBackdropFilter:'blur(20px)',
+                  borderRadius:100, padding:'5px 14px',
                   display:'inline-flex',
-                  fontFamily:FONT_MONO,
-                  fontSize:10, color:'rgba(255,255,255,0.75)',
-                  border:'0.5px solid rgba(255,255,255,0.12)',
+                  fontFamily:FONT_MONO, fontSize:10, color:'rgba(255,255,255,0.8)',
+                  border:'0.5px solid rgba(255,255,255,0.12)', whiteSpace:'nowrap',
                 }}>
-                  iPhone · iPad · Android — wifi local, pas le cloud
+                  iPhone · iPad · Android — wifi local, jamais le cloud
                 </div>
+              </div>
+
+              {/* WIN SIDE — même style que desktop */}
+              <div style={{ padding:'0 24px', textAlign:'right', color:'#fff' }}>
+                <h2 style={{ fontSize:40, fontWeight:700, letterSpacing:-1.8, lineHeight:0.98, margin:0 }}>
+                  Ou votre<br />PC. Pareil.
+                </h2>
+                <div style={{ fontSize:10, fontWeight:700, letterSpacing:2, color:'rgba(255,255,255,0.7)', textTransform:'uppercase', marginTop:12 }}>
+                  Pour Windows 11 · 10
+                </div>
+                <p style={{ fontSize:13, color:'rgba(255,255,255,0.78)', marginTop:6, lineHeight:1.55, maxWidth:220, marginLeft:'auto' }}>
+                  Meme app, meme code, meme dock. Changez de bureau sans reappairer.
+                </p>
+              </div>
+
+              {/* CTAs — même style que desktop */}
+              <div style={{ display:'flex', gap:10, padding:'28px 24px 40px', flexWrap:'wrap', justifyContent:'center' }}>
+                <a href="#install" style={{
+                  display:'inline-flex', alignItems:'center', gap:8,
+                  padding:'12px 22px', borderRadius:14,
+                  background:'#1a1611', color:'#fff',
+                  textDecoration:'none', fontSize:14, fontWeight:600,
+                  boxShadow:'0 8px 24px rgba(0,0,0,0.4)',
+                }}>
+                  <svg width="14" height="16" viewBox="0 0 13 16" fill="white">
+                    <path d="M10.6 7.8 C 10.6 5.9 12.2 5 12.2 5 C 11.4 3.8 10.1 3.7 9.6 3.7 C 8.5 3.6 7.4 4.4 6.9 4.4 C 6.3 4.4 5.4 3.7 4.4 3.7 C 3.1 3.7 1.9 4.5 1.2 5.8 C -0.1 8.3 0.9 12 2.2 14 C 2.8 15 3.6 16 4.6 16 C 5.5 15.9 5.9 15.4 7 15.4 C 8.1 15.4 8.4 16 9.4 16 C 10.5 16 11.2 15 11.8 14 C 12.5 12.9 12.8 11.9 12.8 11.8 C 12.8 11.8 10.6 11 10.6 7.8 Z M 8.7 2.6 C 9.2 2 9.6 1.1 9.4 0.2 C 8.7 0.2 7.7 0.7 7.2 1.3 C 6.7 1.8 6.3 2.7 6.4 3.5 C 7.2 3.6 8.1 3.1 8.7 2.6 Z" />
+                  </svg>
+                  Mac (.dmg)
+                </a>
+                <a href="#" style={{
+                  display:'inline-flex', alignItems:'center', gap:8,
+                  padding:'12px 22px', borderRadius:14,
+                  background:'#fff', color:TEXT_BLACK,
+                  textDecoration:'none', fontSize:14, fontWeight:600,
+                  boxShadow:'0 8px 24px rgba(0,0,0,0.3)',
+                }}>
+                  <svg width="14" height="14" viewBox="0 0 16 16">
+                    <rect x="0" y="0" width="7" height="7" fill="#0067B8" />
+                    <rect x="9" y="0" width="7" height="7" fill="#0067B8" />
+                    <rect x="0" y="9" width="7" height="7" fill="#0067B8" />
+                    <rect x="9" y="9" width="7" height="7" fill="#0067B8" />
+                  </svg>
+                  Windows (.exe)
+                </a>
               </div>
             </div>
           </section>
