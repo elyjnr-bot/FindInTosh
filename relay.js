@@ -178,8 +178,10 @@ wss.on('connection', (ws, req) => {
           console.log(`[+] agent  room=${roomId}`);
         }
         send(ws, { type: 'room_created', roomId, pairingCode: room.pairingCode });
-        // Notify desktop that agent is back
-        if (room.desktop) send(room.desktop, { type: 'agent_reconnected', roomId });
+        // Re-send init to desktop so it gets the current pairing code
+        if (room.desktop) send(room.desktop, {
+          type: 'init', code: room.pairingCode.split(''), roomId, paired: room.isPaired
+        });
         // Claim any desktops that connected without a room
         for (const dws of waitingDesktops) {
           if (dws.readyState === 1) {

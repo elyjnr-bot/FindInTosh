@@ -149,7 +149,7 @@ function useDesktopWS({ onInit, onPhoneConnected, onPhoneDisconnected, onLaunchi
         if (msg.type === 'init')               onInit?.(msg);
         if (msg.type === 'room_assigned')      { onInit?.(msg); } // no-room flow: treat like init
         if (msg.type === 'waiting_for_agent')  setWsState('waiting');
-        if (msg.type === 'agent_reconnected')  onInit?.({ code: null, roomId: msg.roomId, paired: false });
+        // agent_reconnected removed — relay now sends a fresh 'init' instead
         if (msg.type === 'phone_connected')    onPhoneConnected?.(msg);
         if (msg.type === 'phone_disconnected') onPhoneDisconnected?.(msg);
         if (msg.type === 'launching')          onLaunching?.(msg);
