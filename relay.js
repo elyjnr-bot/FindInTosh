@@ -31,6 +31,8 @@ const MIME = {
 // ─── Room state ───────────────────────────────────────────────────────────────
 // rooms: roomId → { agent, desktop, phone, pairingCode, isPaired, dockApps }
 const rooms = new Map();
+// pairingCodes: code → roomId  (for no-room-param phone flow)
+const pairingCodes = new Map();
 
 // Pending HTTP requests waiting for agent response
 const pendingIcons = new Map();  // requestId → { res, timer }
@@ -66,6 +68,7 @@ function ensureRoom(roomId) {
 function cleanRoom(roomId) {
   const r = rooms.get(roomId);
   if (r && !r.agent && !r.desktop && !r.phone) {
+    if (r.pairingCode) pairingCodes.delete(r.pairingCode);
     rooms.delete(roomId);
     console.log(`[~] room cleaned  ${roomId}`);
   }
@@ -118,7 +121,8 @@ const server = http.createServer((req, res) => {
   }
 
   // ── Static files ──────────────────────────────────────────────────────────
-  const filePath = path.join(DIR, urlPath === '/' ? '/index.html' : urlPath);
+  const staticMap = { '/': '/index.html', '/remote': '/app-mobile.html' };
+  const filePath = path.join(DIR, staticMap[urlPath] || urlPath);
   if (!filePath.startsWith(DIR + path.sep) && filePath !== DIR) {
     res.writeHead(403); res.end('Forbidden'); return;
   }
@@ -155,6 +159,7 @@ wss.on('connection', (ws, req) => {
         room.agent = ws;
         ws._roomId = roomId;
         ws._role   = 'agent';
+        pairingCodes.set(room.pairingCode, roomId);
         send(ws, { type: 'room_created', roomId, pairingCode: room.pairingCode });
         console.log(`[+] agent  room=${roomId}`);
         break;
@@ -260,10 +265,31 @@ wss.on('connection', (ws, req) => {
         break;
       }
 
+      // ── Phone joins by pairing code only (no room ID in URL) ────────────
+      case 'find_and_pair': {
+        const targetRoomId = pairingCodes.get(msg.code);
+        if (!targetRoomId) { send(ws, { type: 'pair_error' }); return; }
+        const targetRoom = rooms.get(targetRoomId);
+        if (!targetRoom || !targetRoom.agent) { send(ws, { type: 'pair_error' }); return; }
+        roomId          = targetRoomId;
+        room            = targetRoom;
+        room.phone      = ws;
+        room.isPaired   = true;
+        ws._roomId      = roomId;
+        ws._role        = 'phone';
+        send(ws, { type: 'paired', device: `Mac (${roomId})`, osName: 'macOS', dockApps: room.dockApps, roomId });
+        send(room.desktop, { type: 'phone_connected' });
+        if (room.agent) send(room.agent, { type: 'phone_connected' });
+        console.log(`[✓] paired (find_and_pair)  room=${roomId}`);
+        break;
+      }
+
       // ── Desktop requests fresh pairing code ──────────────────────────────
       case 'refresh_code': {
         if (!room) return;
+        pairingCodes.delete(room.pairingCode);
         room.pairingCode = randomDigits();
+        pairingCodes.set(room.pairingCode, roomId);
         room.isPaired    = false;
         send(room.desktop, { type: 'init', code: room.pairingCode.split(''), roomId, paired: false });
         if (room.phone)  send(room.phone,  { type: 'code_refreshed' });

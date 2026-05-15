@@ -122,7 +122,7 @@ const RealIcon = ({ name, size = 100 }) => {
         boxShadow: `0 1px 1px rgba(0,0,0,0.25), 0 ${size*0.08}px ${size*0.18}px rgba(0,0,0,0.35)`,
       }}>
         <img
-          src={`/icon/${encodeURIComponent(name)}${new URLSearchParams(window.location.search).get('room') ? '?room=' + new URLSearchParams(window.location.search).get('room') : ''}`}
+          src={`/icon/${encodeURIComponent(name)}${window._ftRoomId ? '?room=' + window._ftRoomId : ''}`}
           width={size} height={size}
           style={{ display: 'block', width: '100%', height: '100%', objectFit: 'contain' }}
           onError={() => setErr(true)}
@@ -154,7 +154,7 @@ function useWS() {
   const connect = React.useCallback(() => {
     const host  = window.location.hostname || 'localhost';
     const port  = window.location.port || '7342';
-    const room  = new URLSearchParams(window.location.search).get('room') || '';
+    const room  = window._ftRoomId || new URLSearchParams(window.location.search).get('room') || '';
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
     const query = room ? `?room=${room}` : '';
     setWsState('connecting');
@@ -162,7 +162,8 @@ function useWS() {
     wsRef.current = ws;
     ws.onopen = () => {
       setWsState('connected');
-      ws.send(JSON.stringify({ type: 'register', role: 'phone' }));
+      if (room) ws.send(JSON.stringify({ type: 'register', role: 'phone' }));
+      // no room → wait for user to enter pairing code → send find_and_pair
     };
     ws.onmessage = (e) => {
       let msg; try { msg = JSON.parse(e.data); } catch { return; }
@@ -873,10 +874,12 @@ const PairingScreen = ({ nav, ws }) => {
       if (code.length === 6) {
         setConnecting(true);
         if (ws && ws.wsState === 'connected') {
-          // Real WS pairing — wait for server response
-          ws.send({ type: 'pair', code: code.join('') });
+          const hasRoom = !!new URLSearchParams(window.location.search).get('room');
+          ws.send(hasRoom
+            ? { type: 'pair',          code: code.join('') }
+            : { type: 'find_and_pair', code: code.join('') }
+          );
         } else {
-          // Offline / file:// demo mode — auto-succeed after 1.5s
           setTimeout(() => nav('connected'), 1500);
         }
       }
@@ -1500,8 +1503,12 @@ const OfflineScreen = ({ nav }) => (
 );
 
 // ─── ROOT APP ────────────────────────────────────────────────────────────────
+// Initialize room ID from URL (or empty for /remote flow)
+window._ftRoomId = new URLSearchParams(window.location.search).get('room') || '';
+
 const App = () => {
-  const [screen, setScreen] = useState('welcome');
+  const hasRoom = !!window._ftRoomId;
+  const [screen, setScreen] = useState(hasRoom ? 'welcome' : 'pairing');
   const [screenKey, setScreenKey] = useState(0);
   const ws = useWS();
   const [dockApps, setDockApps] = React.useState([
@@ -1529,6 +1536,7 @@ const App = () => {
   // Handle paired and dock_config messages at App level
   useEffect(() => {
     ws.on('paired', (msg) => {
+      if (msg.roomId) window._ftRoomId = msg.roomId;
       if (msg.dockApps && msg.dockApps.length) setDockApps(msg.dockApps);
       nav('connected');
     });
