@@ -1,10 +1,7 @@
 # FindInTosh — Windows Installer
-# Paste this in PowerShell (run as Administrator for auto-start setup):
+# Paste this in PowerShell:
 #
-#   irm https://findintosh-production.up.railway.app/install.ps1 | iex
-#
-# Or download & run:
-#   powershell -ExecutionPolicy Bypass -File install.ps1
+#   irm https://gracious-enthusiasm-production-fb7b.up.railway.app/install.ps1 | iex
 
 param(
   [string]$RelayUrl = "wss://gracious-enthusiasm-production-fb7b.up.railway.app"
@@ -14,6 +11,7 @@ $ErrorActionPreference = "Continue"
 $BaseUrl     = $RelayUrl -replace '^wss://', 'https://' -replace '^ws://', 'http://'
 $InstallDir  = "$env:APPDATA\FindInTosh"
 $NodeVersion = "20.17.0"
+$NodeDir     = "$InstallDir\node"
 
 Write-Host ""
 Write-Host "  +========================================+"
@@ -26,29 +24,53 @@ New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
 # ── 1. Node.js ────────────────────────────────────────────────────────────────
 
 Write-Host "  [1/3] Verification de Node.js..."
-$nodeCmd = Get-Command node -ErrorAction SilentlyContinue
 
-if (-not $nodeCmd) {
-  Write-Host "        Node.js introuvable. Telechargement de v$NodeVersion..."
-  $msiUrl  = "https://nodejs.org/dist/v$NodeVersion/node-v$NodeVersion-x64.msi"
-  $msiPath = "$env:TEMP\node-setup.msi"
-  try {
-    Invoke-WebRequest -Uri $msiUrl -OutFile $msiPath -UseBasicParsing
-    Write-Host "        Installation en cours (~30 secondes)..."
-    Start-Process msiexec.exe -Wait -ArgumentList "/i `"$msiPath`" /quiet /norestart ADDLOCAL=ALL"
-    Remove-Item $msiPath -ErrorAction SilentlyContinue
-    # Refresh PATH
-    $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" +
-                [System.Environment]::GetEnvironmentVariable("Path", "User")
-    Write-Host "  [1/3] Node.js v$NodeVersion installe OK"
-  } catch {
-    Write-Host "  [!] Impossible d'installer Node.js automatiquement."
-    Write-Host "      Installez-le manuellement depuis : https://nodejs.org"
-    exit 1
-  }
-} else {
-  $ver = & node --version 2>$null
+# Find node: system PATH first, then our local portable copy
+$nodeExe = $null
+$npmExe  = $null
+
+$sysNode = Get-Command node -ErrorAction SilentlyContinue
+if ($sysNode) {
+  $nodeExe = $sysNode.Source
+  $npmExe  = Join-Path (Split-Path $nodeExe) "npm.cmd"
+  $ver     = & $nodeExe --version 2>$null
   Write-Host "  [1/3] Node.js $ver detecte OK"
+} else {
+  # Check if we already downloaded a portable copy
+  $portableNode = Get-ChildItem "$NodeDir" -Filter "node.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+  if ($portableNode) {
+    $nodeExe = $portableNode.FullName
+    $npmExe  = Join-Path (Split-Path $nodeExe) "npm.cmd"
+    $ver     = & $nodeExe --version 2>$null
+    Write-Host "  [1/3] Node.js portable $ver OK"
+  } else {
+    # Download portable zip — no admin, no MSI, no UAC
+    Write-Host "        Node.js introuvable. Telechargement de la version portable v$NodeVersion..."
+    $arch   = if ([Environment]::Is64BitOperatingSystem) { "x64" } else { "x86" }
+    $zipUrl = "https://nodejs.org/dist/v$NodeVersion/node-v$NodeVersion-win-$arch.zip"
+    $zipTmp = "$env:TEMP\node-portable.zip"
+    try {
+      Write-Host "        Telechargement (~30 Mo)..."
+      Invoke-WebRequest -Uri $zipUrl -OutFile $zipTmp -UseBasicParsing
+      Write-Host "        Extraction..."
+      New-Item -ItemType Directory -Force -Path $NodeDir | Out-Null
+      Expand-Archive -Path $zipTmp -DestinationPath $NodeDir -Force
+      Remove-Item $zipTmp -ErrorAction SilentlyContinue
+      $portableNode = Get-ChildItem "$NodeDir" -Filter "node.exe" -Recurse | Select-Object -First 1
+      if (-not $portableNode) { throw "node.exe introuvable apres extraction" }
+      $nodeExe = $portableNode.FullName
+      $npmExe  = Join-Path (Split-Path $nodeExe) "npm.cmd"
+      # Add to PATH for this session
+      $env:Path = (Split-Path $nodeExe) + ";$env:Path"
+      $ver = & $nodeExe --version 2>$null
+      Write-Host "  [1/3] Node.js portable $ver installe OK"
+    } catch {
+      Write-Host "  [!] Echec du telechargement de Node.js : $_"
+      Write-Host "      Installez Node.js manuellement depuis https://nodejs.org puis relancez."
+      Read-Host "  Appuyez sur Entree pour quitter"
+      exit 1
+    }
+  }
 }
 
 # ── 2. Download agent ─────────────────────────────────────────────────────────
@@ -58,18 +80,13 @@ try {
   Invoke-WebRequest -Uri "$BaseUrl/agent-windows.js" -OutFile "$InstallDir\agent.js"  -UseBasicParsing
   Invoke-WebRequest -Uri "$BaseUrl/package.json"     -OutFile "$InstallDir\package.json" -UseBasicParsing
 
-  $npmCmd  = Get-Command npm -ErrorAction SilentlyContinue
-  $npmPath = if ($npmCmd) { $npmCmd.Source } else { $null }
-  if (-not $npmPath) {
-    $nodePath = (Get-Command node).Source
-    $npmPath  = Join-Path (Split-Path $nodePath) "npm.cmd"
-  }
   Push-Location $InstallDir
-  & $npmPath install --omit=dev --silent 2>$null
+  & $npmExe install --omit=dev --silent 2>$null
   Pop-Location
   Write-Host "  [2/3] Agent telecharge OK"
 } catch {
   Write-Host "  [!] Echec du telechargement : $_"
+  Read-Host "  Appuyez sur Entree pour quitter"
   exit 1
 }
 
@@ -77,13 +94,9 @@ try {
 
 Write-Host "  [3/3] Configuration du demarrage automatique..."
 try {
-  $nodeExe  = (Get-Command node).Source
-  $agentJs  = "$InstallDir\agent.js"
-  $logFile  = "$InstallDir\agent.log"
   $taskName = "FindInTosh Agent"
-
-  $envVar   = New-ScheduledTaskAction -Execute $nodeExe `
-    -Argument "`"$agentJs`"" `
+  $action   = New-ScheduledTaskAction -Execute $nodeExe `
+    -Argument "`"$InstallDir\agent.js`"" `
     -WorkingDirectory $InstallDir
   $trigger  = New-ScheduledTaskTrigger -AtLogOn
   $settings = New-ScheduledTaskSettingsSet `
@@ -97,14 +110,14 @@ try {
   Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
   Register-ScheduledTask `
     -TaskName  $taskName `
-    -Action    $envVar `
+    -Action    $action `
     -Trigger   $trigger `
     -Settings  $settings `
     -Principal $principal `
     -Force | Out-Null
   Write-Host "  [3/3] Demarrage automatique configure OK"
 } catch {
-  Write-Host "  [!] Demarrage automatique non configure (lancez en tant qu'Administrateur)."
+  Write-Host "  [!] Demarrage automatique non configure."
   Write-Host "      L'agent fonctionne quand meme, il faudra le relancer manuellement."
 }
 
@@ -113,11 +126,8 @@ try {
 Write-Host ""
 Write-Host "  OK  Installation terminee ! Lancement de l'agent..."
 Write-Host ""
-Write-Host "  Pour voir les logs : Get-Content `"$InstallDir\agent.log`" -Wait"
-Write-Host ""
 
 $env:RELAY_URL = $RelayUrl
-$nodeExe = (Get-Command node).Source
 Start-Process $nodeExe `
   -ArgumentList "`"$InstallDir\agent.js`"" `
   -WorkingDirectory $InstallDir `
