@@ -99,6 +99,7 @@ function getIconBase64(appName) {
 
 let ws              = null;
 let reconnectTimer  = null;
+let pingInterval    = null;
 let roomId          = null;
 let hasOpenedBrowser = false;
 
@@ -116,7 +117,12 @@ function connect() {
 
   ws.on('open', () => {
     console.log('  Connected.\n');
-    ws.send(JSON.stringify({ type: 'agent_register' }));
+    // Send saved roomId so relay can reuse the same room on reconnect
+    ws.send(JSON.stringify({ type: 'agent_register', roomId: config.roomId || null }));
+    // Ping every 25s to prevent Railway from dropping the idle connection
+    pingInterval = setInterval(() => {
+      if (ws && ws.readyState === 1) ws.ping();
+    }, 25000);
   });
 
   ws.on('message', async raw => {
@@ -198,6 +204,7 @@ function connect() {
   });
 
   ws.on('close', () => {
+    if (pingInterval) { clearInterval(pingInterval); pingInterval = null; }
     console.log('  Disconnected. Reconnecting in 5 s…');
     reconnectTimer = setTimeout(connect, 5000);
   });

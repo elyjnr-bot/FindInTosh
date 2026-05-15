@@ -152,16 +152,30 @@ wss.on('connection', (ws, req) => {
 
     switch (msg.type) {
 
-      // ── Agent starts up, creates a room ──────────────────────────────────
+      // ── Agent starts up, creates or reclaims a room ──────────────────────
       case 'agent_register': {
-        roomId     = randomRoomId();
-        room       = ensureRoom(roomId);
-        room.agent = ws;
-        ws._roomId = roomId;
-        ws._role   = 'agent';
-        pairingCodes.set(room.pairingCode, roomId);
+        const savedId = msg.roomId;
+        if (savedId && rooms.has(savedId) && !rooms.get(savedId).agent) {
+          // Reconnect: reuse existing room (desktop/phone may still be connected)
+          roomId     = savedId;
+          room       = rooms.get(roomId);
+          room.agent = ws;
+          ws._roomId = roomId;
+          ws._role   = 'agent';
+          console.log(`[↩] agent reconnected  room=${roomId}`);
+        } else {
+          // New room
+          roomId     = randomRoomId();
+          room       = ensureRoom(roomId);
+          room.agent = ws;
+          ws._roomId = roomId;
+          ws._role   = 'agent';
+          pairingCodes.set(room.pairingCode, roomId);
+          console.log(`[+] agent  room=${roomId}`);
+        }
         send(ws, { type: 'room_created', roomId, pairingCode: room.pairingCode });
-        console.log(`[+] agent  room=${roomId}`);
+        // Notify desktop that agent is back
+        if (room.desktop) send(room.desktop, { type: 'agent_reconnected', roomId });
         break;
       }
 
@@ -322,6 +336,13 @@ wss.on('connection', (ws, req) => {
 
   ws.on('error', err => console.error('[!] ws error:', err.message));
 });
+
+// ─── Keep-alive: ping all clients every 25s ───────────────────────────────────
+setInterval(() => {
+  wss.clients.forEach(client => {
+    if (client.readyState === 1) client.ping();
+  });
+}, 25000);
 
 // ─── Start ────────────────────────────────────────────────────────────────────
 server.listen(PORT, '0.0.0.0', () => {
