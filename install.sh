@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # FindInTosh — Mac agent installer
-# Usage:  curl -fsSL https://your-relay.up.railway.app/install.sh | bash
 
 set -e
 
@@ -8,38 +7,56 @@ RELAY_URL="${RELAY_URL:-wss://findintosh-production.up.railway.app}"
 INSTALL_DIR="$HOME/.findintosh"
 AGENT_FILE="$INSTALL_DIR/agent.js"
 PLIST="$HOME/Library/LaunchAgents/app.findintosh.agent.plist"
+BASE_URL="${RELAY_URL/wss:\/\//https://}"
+BASE_URL="${BASE_URL/ws:\/\//http://}"
 
+clear
 echo ""
-echo "  FindInTosh — installing Mac agent"
+echo "  ╔══════════════════════════════════════╗"
+echo "  ║       FindInTosh — Installing        ║"
+echo "  ╚══════════════════════════════════════╝"
 echo ""
 
-# ── 1. Homebrew ────────────────────────────────────────────────────────────────
-if ! command -v brew &>/dev/null; then
-  echo "  Installing Homebrew…"
-  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+# ── 1. Node.js ────────────────────────────────────────────────────────────────
+NODE_BIN=""
+
+# Check common locations
+for candidate in \
+    "$(command -v node 2>/dev/null)" \
+    /usr/local/bin/node \
+    /opt/homebrew/bin/node \
+    "$HOME/.nvm/versions/node/$(ls "$HOME/.nvm/versions/node/" 2>/dev/null | sort -V | tail -1)/bin/node" \
+    /usr/local/opt/node/bin/node; do
+  if [[ -x "$candidate" ]]; then
+    NODE_BIN="$candidate"
+    break
+  fi
+done
+
+if [[ -z "$NODE_BIN" ]]; then
+  echo "  [!] Node.js not found."
+  echo ""
+  echo "  Install it from https://nodejs.org (LTS version)"
+  echo "  then re-run this script."
+  echo ""
+  exit 1
 fi
 
-# ── 2. Node.js ────────────────────────────────────────────────────────────────
-if ! command -v node &>/dev/null; then
-  echo "  Installing Node.js…"
-  brew install node
-fi
+echo "  [1/3] Node.js found: $NODE_BIN ✓"
+NPM_BIN="$(dirname "$NODE_BIN")/npm"
 
-# ── 3. Create install dir ─────────────────────────────────────────────────────
+# ── 2. Download agent ─────────────────────────────────────────────────────────
+echo "  [2/3] Downloading FindInTosh agent…"
 mkdir -p "$INSTALL_DIR"
-
-# ── 4. Download agent.js ──────────────────────────────────────────────────────
-echo "  Downloading agent…"
-curl -fsSL "${RELAY_URL/wss:\/\//https://}/agent.js" -o "$AGENT_FILE"
-curl -fsSL "${RELAY_URL/wss:\/\//https://}/package.json" -o "$INSTALL_DIR/package.json"
-
+curl -fsSL "${BASE_URL}/agent.js"     -o "$AGENT_FILE"
+curl -fsSL "${BASE_URL}/package.json" -o "$INSTALL_DIR/package.json"
 cd "$INSTALL_DIR"
-npm install --omit=dev --silent
+"$NPM_BIN" install --omit=dev --silent
 
-# ── 5. LaunchAgent (auto-start at login) ──────────────────────────────────────
-NODE_BIN="$(command -v node)"
+# ── 3. LaunchAgent (auto-start at login) ──────────────────────────────────────
+echo "  [3/3] Setting up auto-start at login…"
 
-cat > "$PLIST" <<EOF
+cat > "$PLIST" <<PLISTEOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -60,13 +77,14 @@ cat > "$PLIST" <<EOF
   <key>StandardErrorPath</key> <string>${INSTALL_DIR}/agent.log</string>
 </dict>
 </plist>
-EOF
+PLISTEOF
 
 launchctl unload "$PLIST" 2>/dev/null || true
 launchctl load -w "$PLIST"
 
 echo ""
-echo "  ✅  Agent installed and running!"
+echo "  ✅  FindInTosh installed and running!"
 echo ""
-echo "  Your Room ID will appear in:  tail -f ~/.findintosh/agent.log"
+echo "  Your browser will open in a few seconds…"
+echo "  (If not: tail -f ~/.findintosh/agent.log)"
 echo ""
