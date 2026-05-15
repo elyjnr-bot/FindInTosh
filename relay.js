@@ -165,7 +165,7 @@ wss.on('connection', (ws, req) => {
           room.agent = ws;
           ws._roomId = roomId;
           ws._role   = 'agent';
-          if (!existed) pairingCodes.set(room.pairingCode, roomId);
+          pairingCodes.set(room.pairingCode, roomId); // always update so find_and_pair works
           console.log(`[↩] agent reclaimed  room=${roomId}`);
         } else {
           // First time — generate a fresh room

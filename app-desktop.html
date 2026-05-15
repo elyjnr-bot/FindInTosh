@@ -1458,8 +1458,8 @@ const App = () => {
 
   const ws = useDesktopWS({
     onInit: (msg) => {
-      setPairingCode(msg.code);
-      setPhonePaired(msg.paired);
+      if (msg.code) setPairingCode(msg.code);
+      setPhonePaired(!!msg.paired);
     },
     onPhoneConnected: () => setPhonePaired(true),
     onPhoneDisconnected: () => setPhonePaired(false),
