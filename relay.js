@@ -18,12 +18,14 @@ const PORT = process.env.PORT || 3000;
 const DIR  = __dirname;
 
 const MIME = {
-  '.html': 'text/html',
-  '.js':   'application/javascript',
-  '.css':  'text/css',
-  '.json': 'application/json',
-  '.png':  'image/png',
-  '.ico':  'image/x-icon',
+  '.html':    'text/html',
+  '.js':      'application/javascript',
+  '.css':     'text/css',
+  '.json':    'application/json',
+  '.png':     'image/png',
+  '.ico':     'image/x-icon',
+  '.command': 'application/octet-stream',
+  '.sh':      'text/plain',
 };
 
 // ─── Room state ───────────────────────────────────────────────────────────────
@@ -116,13 +118,18 @@ const server = http.createServer((req, res) => {
   }
 
   // ── Static files ──────────────────────────────────────────────────────────
-  const filePath = path.join(DIR, urlPath === '/' ? '/app-mobile.html' : urlPath);
+  const filePath = path.join(DIR, urlPath === '/' ? '/index.html' : urlPath);
   if (!filePath.startsWith(DIR + path.sep) && filePath !== DIR) {
     res.writeHead(403); res.end('Forbidden'); return;
   }
   fs.readFile(filePath, (err, data) => {
     if (err) { res.writeHead(404); res.end('Not found'); return; }
-    res.writeHead(200, { 'Content-Type': MIME[path.extname(filePath)] || 'text/plain' });
+    const ext = path.extname(filePath);
+    const headers = { 'Content-Type': MIME[ext] || 'text/plain' };
+    if (ext === '.command') {
+      headers['Content-Disposition'] = 'attachment; filename="FindInTosh-install.command"';
+    }
+    res.writeHead(200, headers);
     res.end(data);
   });
 });

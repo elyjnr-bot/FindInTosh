@@ -20,7 +20,7 @@ try {
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
-const RELAY_URL   = process.env.RELAY_URL || 'wss://findintosh.up.railway.app';
+const RELAY_URL   = process.env.RELAY_URL || 'wss://findintosh-production.up.railway.app';
 const CONFIG_DIR  = path.join(os.homedir(), '.findintosh');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 
@@ -100,6 +100,7 @@ function getIconBase64(appName) {
 let ws              = null;
 let reconnectTimer  = null;
 let roomId          = null;
+let hasOpenedBrowser = false;
 
 function saveConfig() {
   fs.mkdirSync(CONFIG_DIR, { recursive: true });
@@ -141,6 +142,12 @@ function connect() {
         console.log('│  Open the Desktop URL on this Mac.              │');
         console.log('│  Open the Mobile URL on the iPhone.             │');
         console.log('└─────────────────────────────────────────────────┘\n');
+
+        if (!hasOpenedBrowser) {
+          hasOpenedBrowser = true;
+          exec(`open "${desktop}"`, () => {});
+          console.log('  Browser opened automatically.\n');
+        }
         break;
       }
 

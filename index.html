@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FindInTosh — Your phone, but for your Mac</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg:      #0a0a0f;
+      --surface: rgba(255,255,255,0.05);
+      --border:  rgba(255,255,255,0.1);
+      --accent:  #6c63ff;
+      --accent2: #a78bfa;
+      --text:    #f0f0f5;
+      --muted:   rgba(240,240,245,0.5);
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 20% 20%, rgba(108,99,255,0.15) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 80%, rgba(167,139,250,0.1) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 40px;
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+      position: sticky; top: 0; z-index: 10;
+    }
+    .logo { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; }
+    .logo span { color: var(--accent2); }
+    .nav-links { display: flex; gap: 24px; }
+    .nav-links a {
+      color: var(--muted); text-decoration: none; font-size: 14px;
+      transition: color .2s;
+    }
+    .nav-links a:hover { color: var(--text); }
+
+    .hero {
+      text-align: center;
+      padding: 100px 40px 80px;
+      max-width: 760px;
+      margin: 0 auto;
+    }
+    .hero-badge {
+      display: inline-block;
+      background: rgba(108,99,255,0.15);
+      border: 1px solid rgba(108,99,255,0.3);
+      color: var(--accent2);
+      font-size: 12px; font-weight: 600; letter-spacing: 1px;
+      padding: 6px 14px; border-radius: 100px;
+      margin-bottom: 28px;
+      text-transform: uppercase;
+    }
+    .hero h1 {
+      font-size: clamp(40px, 7vw, 68px);
+      font-weight: 800;
+      letter-spacing: -2px;
+      line-height: 1.05;
+      margin-bottom: 20px;
+    }
+    .hero h1 em {
+      font-style: normal;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero p {
+      font-size: 18px;
+      color: var(--muted);
+      line-height: 1.6;
+      max-width: 500px;
+      margin: 0 auto 48px;
+    }
+
+    .cta-group { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff; font-weight: 700; font-size: 15px;
+      padding: 14px 28px; border-radius: 14px;
+      text-decoration: none;
+      box-shadow: 0 0 30px rgba(108,99,255,0.4);
+      transition: transform .2s, box-shadow .2s;
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 40px rgba(108,99,255,0.6); }
+    .btn-secondary {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text); font-weight: 600; font-size: 15px;
+      padding: 14px 28px; border-radius: 14px;
+      text-decoration: none;
+      transition: background .2s, transform .2s;
+    }
+    .btn-secondary:hover { background: rgba(255,255,255,0.08); transform: translateY(-2px); }
+
+    .install-note {
+      font-size: 12px; color: var(--muted);
+      margin-top: 14px; line-height: 1.5;
+    }
+    .install-note strong { color: var(--text); }
+
+    .steps-section {
+      max-width: 900px; margin: 0 auto;
+      padding: 0 40px 100px;
+    }
+    .section-label {
+      text-align: center;
+      font-size: 12px; font-weight: 700; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--muted);
+      margin-bottom: 14px;
+    }
+    .section-title {
+      text-align: center;
+      font-size: clamp(24px, 4vw, 36px);
+      font-weight: 800; letter-spacing: -1px;
+      margin-bottom: 60px;
+    }
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+    }
+    .step {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 28px;
+      backdrop-filter: blur(8px);
+    }
+    .step-num {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; font-weight: 800;
+      margin-bottom: 16px;
+    }
+    .step h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+    .step p { font-size: 14px; color: var(--muted); line-height: 1.5; }
+    .step code {
+      display: inline-block;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid var(--border);
+      padding: 2px 8px; border-radius: 6px;
+      font-size: 13px; font-family: 'SF Mono', monospace;
+      color: var(--accent2);
+    }
+
+    .already {
+      max-width: 500px; margin: 0 auto;
+      padding: 0 40px 100px;
+      text-align: center;
+    }
+    .already h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+    .already p { color: var(--muted); font-size: 14px; margin-bottom: 28px; }
+    .room-input {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text); font-size: 20px; font-weight: 700;
+      letter-spacing: 4px; text-align: center;
+      padding: 16px 20px; border-radius: 14px;
+      outline: none; margin-bottom: 12px;
+      transition: border-color .2s;
+    }
+    .room-input::placeholder { color: var(--muted); letter-spacing: 1px; font-weight: 400; font-size: 15px; }
+    .room-input:focus { border-color: var(--accent); }
+    .open-btns {
+      display: flex; gap: 10px; flex-wrap: wrap;
+    }
+    .open-btn {
+      flex: 1;
+      padding: 13px 20px;
+      border-radius: 12px;
+      font-size: 14px; font-weight: 600;
+      cursor: pointer; border: none; text-decoration: none;
+      text-align: center;
+      transition: transform .15s, opacity .15s;
+    }
+    .open-btn:hover { transform: translateY(-1px); }
+    .btn-mac {
+      background: rgba(108,99,255,0.2);
+      border: 1px solid rgba(108,99,255,0.4);
+      color: var(--accent2);
+    }
+    .btn-phone {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+    }
+
+    footer {
+      text-align: center;
+      padding: 40px;
+      color: var(--muted);
+      font-size: 13px;
+      border-top: 1px solid var(--border);
+    }
+
+    @media (max-width: 600px) {
+      nav { padding: 16px 20px; }
+      .hero { padding: 60px 20px 60px; }
+      .steps-section, .already { padding-left: 20px; padding-right: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">Find<span>In</span>Tosh</div>
+  <div class="nav-links">
+    <a href="#install">Install</a>
+    <a href="#already">Open app</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-badge">Mac + iPhone</div>
+  <h1>Your phone,<br>but for your <em>Mac</em></h1>
+  <p>Turn your iPhone into an instant app launcher for your Mac. One tap — any app opens, instantly.</p>
+  <div class="cta-group">
+    <a href="/install.command" download class="btn-primary">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/>
+        <line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      Download for Mac
+    </a>
+    <a href="#already" class="btn-secondary">Already installed →</a>
+  </div>
+  <p class="install-note">
+    <strong>Free &amp; open source.</strong> Requires macOS 12+. Node.js installed automatically.
+  </p>
+</section>
+
+<section class="steps-section" id="install">
+  <div class="section-label">Get started</div>
+  <div class="section-title">Up and running in 3 steps</div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <h3>Download &amp; double-click</h3>
+      <p>Download the installer above. Double-click it — Terminal opens for ~30 seconds and sets everything up automatically. Then you can close Terminal.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <h3>Browser opens automatically</h3>
+      <p>Your Mac control panel opens in the browser with a <code>pairing code</code>. The agent runs silently in the background from now on.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <h3>Pair your iPhone</h3>
+      <p>The Mac app shows you a mobile link. Open it on your iPhone, enter the code — you're connected and ready to launch any app.</p>
+    </div>
+  </div>
+</section>
+
+<section class="already" id="already">
+  <h2>Already installed?</h2>
+  <p>Enter your Room ID (shown in the Mac app) to open the apps directly.</p>
+  <input
+    type="text"
+    class="room-input"
+    id="roomInput"
+    maxlength="6"
+    placeholder="Enter Room ID"
+    autocomplete="off"
+    autocorrect="off"
+    autocapitalize="characters"
+    spellcheck="false"
+  />
+  <div class="open-btns">
+    <a href="#" class="open-btn btn-mac" id="openMac">Open on Mac</a>
+    <a href="#" class="open-btn btn-phone" id="openPhone">Open on iPhone</a>
+  </div>
+</section>
+
+<footer>
+  FindInTosh — open source
+</footer>
+
+<script>
+  const roomInput = document.getElementById('roomInput');
+  const openMac   = document.getElementById('openMac');
+  const openPhone = document.getElementById('openPhone');
+
+  function updateLinks() {
+    const room = roomInput.value.trim().toUpperCase();
+    const base  = window.location.origin;
+    openMac.href   = room ? `${base}/app-desktop.html?room=${room}` : '#';
+    openPhone.href = room ? `${base}/app-mobile.html?room=${room}` : '#';
+    openMac.style.opacity   = room ? '1' : '0.4';
+    openPhone.style.opacity = room ? '1' : '0.4';
+  }
+
+  roomInput.addEventListener('input', updateLinks);
+  updateLinks();
+
+  const urlRoom = new URLSearchParams(location.search).get('room');
+  if (urlRoom) {
+    roomInput.value = urlRoom.toUpperCase();
+    updateLinks();
+  }
+</script>
+</body>
+</html>
