@@ -154,6 +154,17 @@
     }
     .step h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
     .step p { font-size: 14px; color: var(--muted); line-height: 1.5; }
+    .step-tip {
+      display: flex; align-items: flex-start; gap: 8px;
+      background: rgba(251,191,36,0.08);
+      border: 1px solid rgba(251,191,36,0.2);
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-top: 10px;
+      font-size: 13px; color: rgba(251,191,36,0.9);
+      line-height: 1.4;
+    }
+    .step-tip svg { flex-shrink: 0; margin-top: 1px; }
     .step code {
       display: inline-block;
       background: rgba(255,255,255,0.08);
@@ -256,8 +267,14 @@
   <div class="steps">
     <div class="step">
       <div class="step-num">1</div>
-      <h3>Download &amp; double-click</h3>
-      <p>Download the installer above. Double-click it — Terminal opens for ~30 seconds and sets everything up automatically. Then you can close Terminal.</p>
+      <h3>Download &amp; open</h3>
+      <p>Download the installer above. <strong style="color:var(--text)">Right-click it → Open</strong> (not double-click) — Terminal opens for ~30 seconds and sets everything up. Then close Terminal.</p>
+      <div class="step-tip">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        macOS may show a security warning on double-click. Use <strong>right-click → Open</strong> to bypass it.
+      </div>
     </div>
     <div class="step">
       <div class="step-num">2</div>
