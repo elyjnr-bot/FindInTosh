@@ -26,6 +26,7 @@ const MIME = {
   '.ico':     'image/x-icon',
   '.command': 'application/octet-stream',
   '.sh':      'text/plain',
+  '.ps1':     'text/plain',
 };
 
 // ─── Room state ───────────────────────────────────────────────────────────────
