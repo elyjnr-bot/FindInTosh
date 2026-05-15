@@ -157,16 +157,18 @@ wss.on('connection', (ws, req) => {
       // ── Agent starts up, creates or reclaims a room ──────────────────────
       case 'agent_register': {
         const savedId = msg.roomId;
-        if (savedId && rooms.has(savedId) && !rooms.get(savedId).agent) {
-          // Reconnect: reuse existing room (desktop/phone may still be connected)
-          roomId     = savedId;
-          room       = rooms.get(roomId);
+        // If agent provides a saved room ID, always honour it (even after relay restart)
+        if (savedId && /^[A-Z2-9]{4,8}$/.test(savedId)) {
+          roomId = savedId;
+          const existed = rooms.has(roomId);
+          room   = ensureRoom(roomId); // creates with new pairing code if needed
           room.agent = ws;
           ws._roomId = roomId;
           ws._role   = 'agent';
-          console.log(`[↩] agent reconnected  room=${roomId}`);
+          if (!existed) pairingCodes.set(room.pairingCode, roomId);
+          console.log(`[↩] agent reclaimed  room=${roomId}`);
         } else {
-          // New room
+          // First time — generate a fresh room
           roomId     = randomRoomId();
           room       = ensureRoom(roomId);
           room.agent = ws;
