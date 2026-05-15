@@ -1515,10 +1515,11 @@ const App = () => {
   const [screen, setScreen] = useState(hasRoom ? 'welcome' : 'pairing');
   const [screenKey, setScreenKey] = useState(0);
   const ws = useWS();
-  const [dockApps, setDockApps] = React.useState([
-    'launchpad','finder','siri','compass',
-    'music','messages','discord','telegram'
-  ]); // default fallback
+  const MAC_DEFAULT_DOCK = ['launchpad','finder','siri','compass','music','messages','discord','telegram'];
+  const WIN_DEFAULT_DOCK = ['Google Chrome','Spotify','Discord','Microsoft Edge','Notepad','File Explorer','Calculator','Microsoft Teams'];
+
+  const [dockApps, setDockApps] = React.useState(MAC_DEFAULT_DOCK);
+  const [osType,   setOsType]   = React.useState('mac');
   const [dockUpdated, setDockUpdated] = React.useState(false);
   const dockUpdatedTimerRef = React.useRef(null);
 
@@ -1545,10 +1546,18 @@ const App = () => {
     });
     ws.on('paired', (msg) => {
       if (msg.roomId) window._ftRoomId = msg.roomId;
-      if (msg.dockApps && msg.dockApps.length) setDockApps(msg.dockApps);
+      const os = msg.osType || 'mac';
+      setOsType(os);
+      if (msg.dockApps && msg.dockApps.length) {
+        setDockApps(msg.dockApps);
+      } else {
+        // no dock configured yet → use OS-appropriate defaults
+        setDockApps(os === 'windows' ? WIN_DEFAULT_DOCK : MAC_DEFAULT_DOCK);
+      }
       nav('connected');
     });
     ws.on('dock_config', (msg) => {
+      if (msg.osType) setOsType(msg.osType);
       if (msg.apps && msg.apps.length) {
         setDockApps(msg.apps);
         setDockUpdated(true);

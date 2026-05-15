@@ -179,7 +179,7 @@ function connect() {
 
   ws.on('open', () => {
     console.log('  Connected.\n');
-    ws.send(JSON.stringify({ type: 'agent_register', roomId: config.roomId || null }));
+    ws.send(JSON.stringify({ type: 'agent_register', roomId: config.roomId || null, osType: 'windows' }));
     pingInterval = setInterval(() => {
       if (ws && ws.readyState === 1) ws.ping();
     }, 25000);

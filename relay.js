@@ -64,6 +64,7 @@ function ensureRoom(roomId) {
       pairingCode: randomDigits(),
       isPaired:    false,
       dockApps:    [],
+      osType:      'mac',
     });
   }
   return rooms.get(roomId);
@@ -163,20 +164,22 @@ wss.on('connection', (ws, req) => {
           roomId = savedId;
           const existed = rooms.has(roomId);
           room   = ensureRoom(roomId); // creates with new pairing code if needed
-          room.agent = ws;
+          room.agent  = ws;
+          room.osType = msg.osType || 'mac';
           ws._roomId = roomId;
           ws._role   = 'agent';
           pairingCodes.set(room.pairingCode, roomId); // always update so find_and_pair works
-          console.log(`[↩] agent reclaimed  room=${roomId}`);
+          console.log(`[↩] agent reclaimed  room=${roomId}  os=${room.osType}`);
         } else {
           // First time — generate a fresh room
           roomId     = randomRoomId();
           room       = ensureRoom(roomId);
-          room.agent = ws;
+          room.agent  = ws;
+          room.osType = msg.osType || 'mac';
           ws._roomId = roomId;
           ws._role   = 'agent';
           pairingCodes.set(room.pairingCode, roomId);
-          console.log(`[+] agent  room=${roomId}`);
+          console.log(`[+] agent  room=${roomId}  os=${room.osType}`);
         }
         send(ws, { type: 'room_created', roomId, pairingCode: room.pairingCode });
         // Re-send init to desktop so it gets the current pairing code
@@ -235,9 +238,9 @@ wss.on('connection', (ws, req) => {
         if (!room) return;
         if (msg.code === room.pairingCode) {
           room.isPaired = true;
-          send(room.phone,   { type: 'paired', device: `Mac (${roomId})`, osName: 'macOS', dockApps: room.dockApps });
+          send(room.phone,   { type: 'paired', device: `${room.osType === 'windows' ? 'PC' : 'Mac'} (${roomId})`, osName: room.osType === 'windows' ? 'Windows' : 'macOS', osType: room.osType, dockApps: room.dockApps });
           send(room.desktop, { type: 'phone_connected' });
-          send(room.phone,   { type: 'dock_config', apps: room.dockApps });
+          send(room.phone,   { type: 'dock_config', apps: room.dockApps, osType: room.osType });
           if (room.agent) send(room.agent, { type: 'phone_connected' });
           console.log(`[✓] paired  room=${roomId}`);
         } else {
@@ -318,7 +321,7 @@ wss.on('connection', (ws, req) => {
         room.isPaired   = true;
         ws._roomId      = roomId;
         ws._role        = 'phone';
-        send(ws, { type: 'paired', device: `Mac (${roomId})`, osName: 'macOS', dockApps: room.dockApps, roomId });
+        send(ws, { type: 'paired', device: `${room.osType === 'windows' ? 'PC' : 'Mac'} (${roomId})`, osName: room.osType === 'windows' ? 'Windows' : 'macOS', osType: room.osType, dockApps: room.dockApps, roomId });
         send(room.desktop, { type: 'phone_connected' });
         if (room.agent) send(room.agent, { type: 'phone_connected' });
         console.log(`[✓] paired (find_and_pair)  room=${roomId}`);
