@@ -4,7 +4,7 @@
 
 set -e
 
-RELAY_URL="${RELAY_URL:-wss://findintosh-production.up.railway.app}"
+RELAY_URL="${RELAY_URL:-wss://gracious-enthusiasm-production-fb7b.up.railway.app}"
 INSTALL_DIR="$HOME/.findintosh"
 NODE_DIR="$INSTALL_DIR/node"
 AGENT_FILE="$INSTALL_DIR/agent.js"

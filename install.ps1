@@ -7,7 +7,7 @@
 #   powershell -ExecutionPolicy Bypass -File install.ps1
 
 param(
-  [string]$RelayUrl = "wss://findintosh-production.up.railway.app"
+  [string]$RelayUrl = "wss://gracious-enthusiasm-production-fb7b.up.railway.app"
 )
 
 $ErrorActionPreference = "Continue"

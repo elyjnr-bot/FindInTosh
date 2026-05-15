@@ -17,7 +17,7 @@ try {
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
-const RELAY_URL   = process.env.RELAY_URL || 'wss://findintosh-production.up.railway.app';
+const RELAY_URL   = process.env.RELAY_URL || 'wss://gracious-enthusiasm-production-fb7b.up.railway.app';
 const CONFIG_DIR  = path.join(os.homedir(), 'AppData', 'Roaming', 'FindInTosh');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 const ICON_CACHE  = path.join(os.tmpdir(), 'ft_icons');

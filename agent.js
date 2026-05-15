@@ -20,7 +20,7 @@ try {
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
-const RELAY_URL   = process.env.RELAY_URL || 'wss://findintosh-production.up.railway.app';
+const RELAY_URL   = process.env.RELAY_URL || 'wss://gracious-enthusiasm-production-fb7b.up.railway.app';
 const CONFIG_DIR  = path.join(os.homedir(), '.findintosh');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 
