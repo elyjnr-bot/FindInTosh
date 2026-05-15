@@ -147,11 +147,14 @@ function useDesktopWS({ onInit, onPhoneConnected, onPhoneDisconnected, onLaunchi
       ws.onmessage = (e) => {
         let msg; try { msg = JSON.parse(e.data); } catch { return; }
         if (msg.type === 'init')               onInit?.(msg);
+        if (msg.type === 'room_assigned')      { onInit?.(msg); } // no-room flow: treat like init
+        if (msg.type === 'waiting_for_agent')  setWsState('waiting');
+        if (msg.type === 'agent_reconnected')  onInit?.({ code: null, roomId: msg.roomId, paired: false });
         if (msg.type === 'phone_connected')    onPhoneConnected?.(msg);
         if (msg.type === 'phone_disconnected') onPhoneDisconnected?.(msg);
         if (msg.type === 'launching')          onLaunching?.(msg);
         if (msg.type === 'dock_saved')         onDockSaved?.(msg);
-        if (msg.type === 'dock_config')        onDockConfig?.(msg); // no-op slot for future real-time updates
+        if (msg.type === 'dock_config')        onDockConfig?.(msg);
       };
       ws.onclose = () => {
         setWsState('disconnected');
@@ -1486,8 +1489,9 @@ const App = () => {
   // WS status pill colors/labels
   const wsIndicator = (() => {
     if (ws.wsState === 'connected' && effectivePaired) return { dot: '#34C759', label: 'Live' };
-    if (ws.wsState === 'connected')                    return { dot: '#007AFF', label: 'Server' };
-    return { dot: '#8E8E93', label: 'Offline' };
+    if (ws.wsState === 'connected')                    return { dot: '#007AFF', label: 'En ligne' };
+    if (ws.wsState === 'waiting')                      return { dot: '#FF9500', label: 'Attente agent…' };
+    return { dot: '#8E8E93', label: 'Hors ligne' };
   })();
 
   return (

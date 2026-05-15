@@ -33,6 +33,8 @@ const MIME = {
 const rooms = new Map();
 // pairingCodes: code → roomId  (for no-room-param phone flow)
 const pairingCodes = new Map();
+// desktops waiting without a room — get claimed by next agent that connects
+const waitingDesktops = new Set();
 
 // Pending HTTP requests waiting for agent response
 const pendingIcons = new Map();  // requestId → { res, timer }
@@ -176,11 +178,31 @@ wss.on('connection', (ws, req) => {
         send(ws, { type: 'room_created', roomId, pairingCode: room.pairingCode });
         // Notify desktop that agent is back
         if (room.desktop) send(room.desktop, { type: 'agent_reconnected', roomId });
+        // Claim any desktops that connected without a room
+        for (const dws of waitingDesktops) {
+          if (dws.readyState === 1) {
+            room.desktop = dws;
+            dws._roomId  = roomId;
+            dws._role    = 'desktop';
+            waitingDesktops.delete(dws);
+            send(dws, { type: 'room_assigned', roomId, code: room.pairingCode.split(''), paired: room.isPaired });
+            console.log(`    desktop claimed from waiting  room=${roomId}`);
+            break; // one desktop per room
+          }
+        }
         break;
       }
 
       // ── Desktop or phone joins a room ─────────────────────────────────────
       case 'register': {
+        if (!roomId && msg.role === 'desktop') {
+          // Desktop with no room — put in waiting list, agent will claim it
+          waitingDesktops.add(ws);
+          ws._role = 'desktop_waiting';
+          send(ws, { type: 'waiting_for_agent' });
+          console.log(`    desktop waiting (no room)`);
+          return;
+        }
         if (!roomId) { send(ws, { type: 'error', message: 'Missing room ID' }); return; }
         room      = ensureRoom(roomId);
         ws._roomId = roomId;
@@ -315,6 +337,7 @@ wss.on('connection', (ws, req) => {
   });
 
   ws.on('close', () => {
+    waitingDesktops.delete(ws);
     if (!ws._roomId) return;
     const r = rooms.get(ws._roomId);
     if (!r) return;
