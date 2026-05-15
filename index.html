@@ -692,8 +692,10 @@
             <div>
               <div style={{ fontFamily:FONT_MONO, fontSize:12, color:'rgba(26,22,17,0.4)', marginBottom:10 }}>01</div>
               <div style={{ fontSize:22, fontWeight:700, color:TEXT_BLACK, marginBottom:6 }}>Installer</div>
-              <div style={{ fontSize:14, color:'rgba(26,22,17,0.65)', marginBottom:20, lineHeight:1.5 }}>
-                L'app pese 8 Mo. Apple Silicon natif.
+              <div style={{ fontSize:14, color:'rgba(26,22,17,0.65)', marginBottom:8, lineHeight:1.6 }}>
+                Copiez la commande ci-dessous et collez-la dans le <strong style={{color:TEXT_BLACK}}>Terminal</strong> de votre Mac
+                (<kbd style={{fontFamily:FONT_MONO, fontSize:12, background:'rgba(26,22,17,0.08)', borderRadius:4, padding:'1px 5px'}}>⌘ Espace</kbd> → "Terminal").
+                L'app se configure toute seule en 30 secondes.
               </div>
               <div style={{
                 background:'#fff', borderRadius:16,
@@ -712,8 +714,10 @@
             <div>
               <div style={{ fontFamily:FONT_MONO, fontSize:12, color:'rgba(26,22,17,0.4)', marginBottom:10 }}>02</div>
               <div style={{ fontSize:22, fontWeight:700, color:TEXT_BLACK, marginBottom:6 }}>Pairer</div>
-              <div style={{ fontSize:14, color:'rgba(26,22,17,0.65)', marginBottom:20, lineHeight:1.5 }}>
-                Un code a 6 caracteres apparait dans le menubar.
+              <div style={{ fontSize:14, color:'rgba(26,22,17,0.65)', marginBottom:8, lineHeight:1.6 }}>
+                Votre navigateur s'ouvre avec un <strong style={{color:TEXT_BLACK}}>code à 6 chiffres</strong>.
+                Ouvrez le lien affiché sur votre iPhone, saisissez le code — c'est fait.
+                Le téléphone et le Mac sont liés en quelques secondes.
               </div>
               <div style={{
                 background:'#fff', borderRadius:16,
@@ -729,8 +733,10 @@
             <div>
               <div style={{ fontFamily:FONT_MONO, fontSize:12, color:'rgba(26,22,17,0.4)', marginBottom:10 }}>03</div>
               <div style={{ fontSize:22, fontWeight:700, color:TEXT_BLACK, marginBottom:6 }}>Profiter</div>
-              <div style={{ fontSize:14, color:'rgba(26,22,17,0.65)', marginBottom:20, lineHeight:1.5 }}>
-                Le dock apparait. Tap pour lancer.
+              <div style={{ fontSize:14, color:'rgba(26,22,17,0.65)', marginBottom:8, lineHeight:1.6 }}>
+                Vos apps préférées s'affichent sur le téléphone en mode paysage.
+                Un <strong style={{color:TEXT_BLACK}}>tap</strong> depuis l'iPhone lance l'app directement sur le Mac.
+                Posez le téléphone à côté du clavier — c'est votre second écran tactile.
               </div>
               <div style={{
                 background:'#fff', borderRadius:16,
@@ -823,6 +829,47 @@
             }}>
               Gratuit · Apple Silicon natif · Node.js integre · macOS 12+
             </div>
+          </div>
+
+          {/* Step-by-step instructions */}
+          <div style={{
+            maxWidth:860, marginTop:32,
+            display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:16,
+          }}>
+            {[
+              {
+                n:'1',
+                title:'Ouvrir Terminal',
+                body: <><kbd style={{fontFamily:FONT_MONO, fontSize:12, background:'rgba(26,22,17,0.08)', borderRadius:4, padding:'1px 6px'}}>⌘ Espace</kbd>{' '}puis tapez{' '}<strong>"Terminal"</strong> et appuyez sur Entrée. Collez la commande ci-dessus et patientez ~30 secondes.</>,
+              },
+              {
+                n:'2',
+                title:'Navigateur automatique',
+                body: <>Le panneau Mac s'ouvre tout seul dans votre navigateur avec un <strong>code de jumelage</strong>. L'agent tourne en arrière-plan dès maintenant.</>,
+              },
+              {
+                n:'3',
+                title:'Ouvrir le lien sur iPhone',
+                body: <>Le panneau Mac affiche un lien <strong>Copy</strong>. Ouvrez-le sur votre iPhone, saisissez le code à 6 chiffres — vous êtes connecté.</>,
+              },
+            ].map(({ n, title, body }) => (
+              <div key={n} style={{
+                background:'#fff', borderRadius:12, padding:'18px 20px',
+                boxShadow:'0 1px 3px rgba(0,0,0,0.06), 0 8px 20px rgba(0,0,0,0.04)',
+                border:'0.5px solid rgba(26,22,17,0.07)',
+              }}>
+                <div style={{
+                  width:26, height:26, borderRadius:8,
+                  background:ORANGE_GRAD,
+                  display:'flex', alignItems:'center', justifyContent:'center',
+                  fontSize:13, fontWeight:800, color:'#fff',
+                  marginBottom:10,
+                  boxShadow:'0 4px 10px rgba(255,122,69,0.35)',
+                }}>{n}</div>
+                <div style={{ fontSize:14, fontWeight:700, color:TEXT_BLACK, marginBottom:6 }}>{title}</div>
+                <div style={{ fontSize:13, color:'rgba(26,22,17,0.62)', lineHeight:1.6 }}>{body}</div>
+              </div>
+            ))}
           </div>
         </section>
       );
