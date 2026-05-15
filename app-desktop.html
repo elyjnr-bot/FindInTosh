@@ -695,21 +695,35 @@ const ConnectionTab = ({ platform, paired, setPaired, pairingCode, onRefresh }) 
           </svg>
         )}
         <span>
-          Open FindInTosh on your phone and enter this code. Expires in{' '}
+          Enter this code in FindInTosh on your phone. Expires in{' '}
           <b style={{ color: seconds < 60 ? FT.danger : 'inherit' }}>{formatTime(seconds)}</b>
         </span>
       </div>
 
+      {/* Mobile link */}
+      {(() => {
+        const room = new URLSearchParams(window.location.search).get('room') || '';
+        if (!room) return null;
+        const mobileUrl = `${window.location.origin}/remote?room=${room}`;
+        return (
+          <div style={{
+            marginTop:10, padding:'8px 12px', borderRadius: platform==='mac' ? 10 : 4,
+            background:'rgba(0,0,0,0.04)', border:'0.5px solid rgba(0,0,0,0.1)',
+            display:'flex', alignItems:'center', gap:8,
+          }}>
+            <span style={{ fontSize:11, color:'rgba(0,0,0,0.5)', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+              📱 {mobileUrl}
+            </span>
+            <button onClick={() => navigator.clipboard.writeText(mobileUrl)} style={{
+              background: accent, border:'none', color:'#fff', borderRadius:6,
+              fontFamily:font, fontSize:11, fontWeight:600, padding:'4px 10px', cursor:'pointer', flexShrink:0,
+            }}>Copy</button>
+          </div>
+        );
+      })()}
+
       {/* Buttons */}
-      <div style={{ display:'flex', gap:8, marginTop:14 }}>
-        <button style={{
-          flex:1, height:34, borderRadius: platform==='mac' ? 8 : 4,
-          background:platform==='mac' ? 'rgba(0,0,0,0.05)' : '#fff',
-          border: platform==='mac' ? '0.5px solid rgba(0,0,0,0.1)' : '1px solid rgba(0,0,0,0.15)',
-          fontFamily:font, fontSize:13, fontWeight:500, color:'#1a1a1a', cursor:'pointer',
-        }}>
-          <span style={{ marginRight:5 }}>⊞</span>Show QR
-        </button>
+      <div style={{ display:'flex', gap:8, marginTop:10 }}>
         <button onClick={handleRefresh} style={{
           flex:1, height:34, borderRadius: platform==='mac' ? 8 : 4,
           background: accent, border:'none', color:'#fff',
