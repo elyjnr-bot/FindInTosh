@@ -7,6 +7,7 @@
   <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js" crossorigin="anonymous"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { width: 100%; height: 100%; overflow: hidden; }
@@ -579,6 +580,31 @@ const PairingCode = ({ code, mono = 'apple', size = 44, fontSize = 22 }) => (
   </div>
 );
 
+// ─── QR CODE ──────────────────────────────────────────────────────────────────
+const QRCode = ({ url, size = 140 }) => {
+  const canvasRef = React.useRef(null);
+  React.useEffect(() => {
+    if (!url || !canvasRef.current || typeof window.QRCode === 'undefined') return;
+    window.QRCode.toCanvas(canvasRef.current, url, {
+      width: size, margin: 1,
+      color: { dark: '#1a1611', light: '#ffffff' },
+    }, () => {});
+  }, [url, size]);
+  if (!url) return null;
+  return (
+    <div style={{
+      background:'#fff', borderRadius:12, padding:8,
+      boxShadow:'0 2px 12px rgba(0,0,0,0.12)',
+      display:'inline-flex', flexDirection:'column', alignItems:'center', gap:6,
+    }}>
+      <canvas ref={canvasRef} style={{ borderRadius:6, display:'block' }} />
+      <span style={{ fontSize:9, color:'rgba(0,0,0,0.4)', fontFamily:'monospace', letterSpacing:0.3 }}>
+        Scanner avec l'iPhone
+      </span>
+    </div>
+  );
+};
+
 // ─── CONNECTION TAB ────────────────────────────────────────────────────────────
 const ConnectionTab = ({ platform, paired, setPaired, pairingCode, onRefresh }) => {
   const [seconds, setSeconds] = useState(222); // 3:42
@@ -700,24 +726,27 @@ const ConnectionTab = ({ platform, paired, setPaired, pairingCode, onRefresh }) 
         </span>
       </div>
 
-      {/* Mobile link */}
+      {/* Mobile link + QR */}
       {(() => {
         const room = new URLSearchParams(window.location.search).get('room') || '';
         if (!room) return null;
         const mobileUrl = `${window.location.origin}/remote?room=${room}`;
         return (
-          <div style={{
-            marginTop:10, padding:'8px 12px', borderRadius: platform==='mac' ? 10 : 4,
-            background:'rgba(0,0,0,0.04)', border:'0.5px solid rgba(0,0,0,0.1)',
-            display:'flex', alignItems:'center', gap:8,
-          }}>
-            <span style={{ fontSize:11, color:'rgba(0,0,0,0.5)', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-              📱 {mobileUrl}
-            </span>
-            <button onClick={() => navigator.clipboard.writeText(mobileUrl)} style={{
-              background: accent, border:'none', color:'#fff', borderRadius:6,
-              fontFamily:font, fontSize:11, fontWeight:600, padding:'4px 10px', cursor:'pointer', flexShrink:0,
-            }}>Copy</button>
+          <div style={{ marginTop:12, display:'flex', flexDirection:'column', alignItems:'center', gap:10 }}>
+            <QRCode url={mobileUrl} size={148} />
+            <div style={{
+              width:'100%', padding:'8px 12px', borderRadius: platform==='mac' ? 10 : 4,
+              background:'rgba(0,0,0,0.04)', border:'0.5px solid rgba(0,0,0,0.1)',
+              display:'flex', alignItems:'center', gap:8,
+            }}>
+              <span style={{ fontSize:10, color:'rgba(0,0,0,0.45)', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                📱 {mobileUrl}
+              </span>
+              <button onClick={() => navigator.clipboard.writeText(mobileUrl)} style={{
+                background: accent, border:'none', color:'#fff', borderRadius:6,
+                fontFamily:font, fontSize:11, fontWeight:600, padding:'4px 10px', cursor:'pointer', flexShrink:0,
+              }}>Copy</button>
+            </div>
           </div>
         );
       })()}
