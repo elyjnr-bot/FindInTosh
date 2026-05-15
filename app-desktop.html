@@ -1476,7 +1476,7 @@ const App = () => {
       setPhonePaired(!!msg.paired);
     },
     onPhoneConnected: () => setPhonePaired(true),
-    onPhoneDisconnected: () => setPhonePaired(false),
+    onPhoneDisconnected: () => { /* keep paired=true; phone will auto-reconnect */ },
     onLaunching: (msg) => {
       setLastLaunch({ app: msg.app, appName: msg.appName, time: Date.now() });
       setTimeout(() => setLastLaunch(null), 3000);

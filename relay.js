@@ -353,8 +353,8 @@ wss.on('connection', (ws, req) => {
     } else if (ws._role === 'desktop') {
       r.desktop = null;
     } else if (ws._role === 'phone') {
-      r.phone    = null;
-      r.isPaired = false;
+      r.phone = null;
+      // Keep r.isPaired=true so phone can reconnect without re-entering code
       send(r.desktop, { type: 'phone_disconnected' });
       if (r.agent) send(r.agent, { type: 'phone_disconnected' });
     }

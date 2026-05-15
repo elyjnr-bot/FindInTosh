@@ -170,7 +170,11 @@ function useWS() {
       const handler = listenersRef.current[msg.type];
       if (handler) handler(msg);
     };
-    ws.onclose = () => { setWsState('disconnected'); wsRef.current = null; };
+    ws.onclose = () => {
+      setWsState('disconnected');
+      wsRef.current = null;
+      setTimeout(() => connect(), 4000); // auto-reconnect
+    };
     ws.onerror = () => setWsState('error');
   }, []);
 
@@ -1535,6 +1539,10 @@ const App = () => {
 
   // Handle paired and dock_config messages at App level
   useEffect(() => {
+    // phone reconnects to an already-paired room → skip re-entering code
+    ws.on('ready', (msg) => {
+      if (msg.paired) nav('connected');
+    });
     ws.on('paired', (msg) => {
       if (msg.roomId) window._ftRoomId = msg.roomId;
       if (msg.dockApps && msg.dockApps.length) setDockApps(msg.dockApps);
