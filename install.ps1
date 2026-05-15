@@ -58,7 +58,8 @@ try {
   Invoke-WebRequest -Uri "$BaseUrl/agent-windows.js" -OutFile "$InstallDir\agent.js"  -UseBasicParsing
   Invoke-WebRequest -Uri "$BaseUrl/package.json"     -OutFile "$InstallDir\package.json" -UseBasicParsing
 
-  $npmPath = (Get-Command npm -ErrorAction SilentlyContinue)?.Source
+  $npmCmd  = Get-Command npm -ErrorAction SilentlyContinue
+  $npmPath = if ($npmCmd) { $npmCmd.Source } else { $null }
   if (-not $npmPath) {
     $nodePath = (Get-Command node).Source
     $npmPath  = Join-Path (Split-Path $nodePath) "npm.cmd"
